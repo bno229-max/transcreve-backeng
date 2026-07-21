@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Transcreve.AI - Completo</title>
+    <meta name="theme-color" content="#0F172A">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+    <style>
+        :root {
+            --bg-color: #F8FAFC; --surface-color: #FFFFFF; --text-primary: #0F172A; --text-secondary: #64748B;
+            --primary-color: #3B82F6; --danger-color: #EF4444; --premium-color: #8B5CF6; --whatsapp-color: #25D366;
+            --border-color: #E2E8F0; --radius-sm: 8px; --radius-md: 16px; --radius-lg: 24px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-primary); -webkit-font-smoothing: antialiased; padding-bottom: 80px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+        .hidden { display: none !important; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Top Bar & Avatar */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .user-info { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; object-fit: cover; border: 2px solid var(--surface-color); box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
+        .user-info h1 { font-size: 1.1rem; }
+        .user-info p { font-size: 0.8rem; color: var(--text-secondary); background: rgba(139, 92, 246, 0.1); color: var(--premium-color); padding: 2px 8px; border-radius: 12px; display: inline-block; margin-top: 4px; font-weight: 600;}
+
+        /* Cards & Buttons */
+        .usage-card { background: var(--surface-color); padding: 20px; border-radius: var(--radius-md); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid var(--border-color); }
+        .usage-card h3 { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px; }
+        .progress-bar { width: 100%; height: 8px; background: var(--bg-color); border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: var(--primary-color); border-radius: 4px; transition: width 0.3s ease; }
+        button { border: none; cursor: pointer; border-radius: var(--radius-sm); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+        button:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary-color); color: white; padding: 14px 20px; width: 100%; font-size: 1rem; border-radius: var(--radius-md); }
+        .btn-primary.huge { padding: 20px; font-size: 1.1rem; height: 80px; flex-direction: column; gap: 4px; border-radius: var(--radius-lg); margin-bottom: 12px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .btn-secondary { background: var(--surface-color); color: var(--text-primary); border: 1px solid var(--border-color); padding: 14px 20px; width: 100%; border-radius: var(--radius-md); }
+        .btn-whatsapp { background: var(--whatsapp-color); color: white; padding: 14px 20px; width: 100%; border-radius: var(--radius-md); margin-top: 12px; font-size: 0.9rem; }
+        .btn-danger { background: white; color: var(--danger-color); border: 1px solid var(--danger-color); padding: 14px 20px; width: 100%; border-radius: var(--radius-md); }
+        .icon-btn { background: transparent; color: var(--text-secondary); padding: 8px; border-radius: 50%; }
+
+        /* Lista de Histórico */
+        .accordion-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 16px 0; user-select: none; }
+        .accordion-header h2 { font-size: 1.1rem; }
+        .accordion-content { display: block; overflow: hidden; }
+        .accordion-content.collapsed { display: none; }
+        .history-item { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--surface-color); border-radius: var(--radius-md); margin-bottom: 12px; border: 1px solid var(--border-color); }
+        .history-item .icon { padding: 10px; border-radius: 12px; display: flex; align-items: center; justify-content: center;}
+        .icon-recorded { background: rgba(59, 130, 246, 0.1); color: var(--primary-color); }
+        .icon-whatsapp { background: rgba(37, 211, 102, 0.1); color: var(--whatsapp-color); }
+        .history-item .details { flex: 1; margin: 0 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-item h4 { font-size: 0.95rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .history-item p { font-size: 0.8rem; color: var(--text-secondary); }
+
+        /* Gravação */
+        .recording-ui { height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; }
+        .pulse { animation: pulseText 1.5s infinite; color: var(--danger-color); display: flex; align-items: center; gap: 8px; }
+        .pulse::before { content: ''; width: 12px; height: 12px; background: var(--danger-color); border-radius: 50%; display: inline-block; }
+        @keyframes pulseText { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .time-display { font-size: 4.5rem; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
+        #audio-visualizer { width: 100%; height: 120px; }
+        .recording-controls { display: flex; gap: 16px; width: 100%; }
+
+        /* Processamento */
+        .processing-container { text-align: center; padding: 60px 0; }
+        .spinner { border: 4px solid var(--border-color); border-top: 4px solid var(--primary-color); border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; margin: 0 auto 24px auto; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .text-editor { background: var(--surface-color); padding: 24px; border-radius: var(--radius-md); min-height: 250px; border: 1px solid var(--border-color); margin: 16px 0; line-height: 1.7; outline: none; }
+
+        /* Perfil e Pastas */
+        .profile-header { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 32px; }
+        .profile-img-container { position: relative; width: 100px; height: 100px; }
+        .profile-img-container img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color); }
+        .profile-img-container .edit-badge { position: absolute; bottom: 0; right: 0; background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 2px solid white;}
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;}
+        .form-control { width: 100%; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 1rem; background: var(--surface-color); outline: none;}
+        .folder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+        .folder-card { background: var(--surface-color); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; cursor: pointer;}
+        .folder-card .material-symbols-outlined { color: var(--primary-color); font-size: 32px; }
+
+        /* Bottom Nav */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface-color); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 12px 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 1000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--text-secondary); font-size: 0.75rem; font-weight: 500; cursor: pointer;}
+        .nav-item.active { color: var(--primary-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- ================= VIEW: INÍCIO ================= -->
+        <section id="view-dashboard" class="view active">
+            <header class="top-bar">
+                <div class="user-info">
+                    <img src="" alt="Avatar" class="avatar display-avatar" id="dash-avatar" style="display:none;">
+                    <div class="avatar display-initials" id="dash-initials">F</div>
+                    <div>
+                        <h1 id="dash-name">Olá, Fabiano</h1>
+                        <p>Plano Pro</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="usage-card">
+                <h3>Minutos Utilizados</h3>
+                <div class="progress-bar"><div class="fill" style="width: 25%;"></div></div>
+                <p>25 de 100 minutos disponíveis</p>
+            </div>
+
+            <div class="action-buttons">
+                <button id="btn-start-record" class="btn-primary huge">
+                    <span class="material-symbols-outlined" style="font-size: 32px;">mic</span>
+                    Gravar Áudio
+                </button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-secondary" onclick="document.getElementById('file-input').click()">
+                        <span class="material-symbols-outlined">upload_file</span> Upload
+                    </button>
+                    <button class="btn-whatsapp" onclick="document.getElementById('wa-input').click()">
+                        WhatsApp
+                    </button>
+                </div>
+                <input type="file" id="file-input" accept="audio/*" hidden onchange="handleFileUpload(event, 'upload')">
+                <input type="file" id="wa-input" accept="audio/*" hidden onchange="handleFileUpload(event, 'whatsapp')">
+            </div>
+
+            <div class="history-list">
+                <div class="accordion-header" id="toggle-history">
+                    <h2>Últimas Transcrições</h2>
+                    <span class="material-symbols-outlined" id="toggle-icon">expand_less</span>
+                </div>
+                <div class="accordion-content" id="history-container">
+                    <!-- Itens gerados via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= VIEW: PASTAS ================= -->
+        <section id="view-folders" class="view hidden">
+            <header class="top-bar"><h2>Minhas Pastas</h2></header>
+            <div class="folder-grid">
+                <div class="folder-card"><span class="material-symbols-outlined">folder</span><h4>Reuniões</h4></div>
+                <div class="folder-card"><span class="material-symbols-outlined">folder</span><h4>Aulas</h4></div>
+            </div>
+        </section>
+
+        <!-- ================= VIEW: PERFIL ================= -->
+        <section id="view-profile" class="view hidden">
+            <header class="top-bar"><h2>Meu Perfil</h2></header>
+            <div class="profile-header">
+                <div class="profile-img-container">
+                    <img src="" alt="Avatar" id="profile-preview" style="display:none;">
+                    <div id="profile-initials" style="width: 100%; height: 100%; border-radius: 50%; background: var(--primary-color); color: white; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; font-weight: bold;">F</div>
+                    <label for="avatar-upload" class="edit-badge"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></label>
+                    <input type="file" id="avatar-upload" accept="image/*" hidden>
+                </div>
+            </div>
+            <form id="profile-form">
+                <div class="form-group"><label>Nome Completo</label><input type="text" id="prof-name" class="form-control"></div>
+                <div class="form-group"><label>E-mail</label><input type="email" id="prof-email" class="form-control"></div>
+                <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="prof-phone" class="form-control"></div>
+                <div class="form-group"><label>Sexo</label>
+                    <select id="prof-gender" class="form-control">
+                        <option value="">Selecione...</option>
+                        <option value="masculino">Masculino</option>
+                        <option value="feminino">Feminino</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-primary" onclick="saveProfile()" style="margin-top: 24px;">Salvar Alterações</button>
+            </form>
+        </section>
+
+        <!-- ================= VIEW: GRAVAÇÃO E RESULTADO ================= -->
+        <section id="view-recording" class="view hidden">
+            <div class="recording-ui">
+                <h2 class="status-text pulse">Gravando</h2>
+                <div class="time-display" id="record-time">00:00</div>
+                <canvas id="audio-visualizer"></canvas>
+                <div class="recording-controls">
+                    <button id="btn-cancel-record" class="btn-danger">Cancelar</button>
+                    <button id="btn-stop-record" class="btn-primary">Finalizar</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-result" class="view hidden">
+            <header class="top-bar">
+                <button class="icon-btn" onclick="navTo('dashboard')"><span class="material-symbols-outlined">arrow_back</span></button>
+                <h2>Transcrição</h2>
+            </header>
+            <div id="processing-state" class="processing-container active">
+                <div class="spinner"></div><h3 id="process-status">Processando...</h3>
+                <div class="progress-bar" style="max-width: 300px; margin: 0 auto;"><div id="process-progress" class="fill" style="width: 0%;"></div></div>
+            </div>
+            <div id="result-state" class="result-container hidden">
+                <div style="display:flex; gap:8px; margin-bottom:16px;">
+                    <span class="badge" style="font-size:0.75rem; padding:4px 12px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:16px;">Português</span>
+                    <span class="badge" id="audio-duration" style="font-size:0.75rem; padding:4px 12px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:16px;">00:00</span>
+                </div>
+                <div class="text-editor" contenteditable="true" id="final-text"></div>
+                <button class="btn-secondary" onclick="alert('Texto copiado!')" style="margin-bottom: 12px;"><span class="material-symbols-outlined">content_copy</span> Copiar Texto</button>
+                <button class="btn-primary" onclick="navTo('dashboard')">Concluir</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- ================= BOTTOM NAVIGATION ================= -->
+    <nav class="bottom-nav">
+        <a class="nav-item active" onclick="navTo('dashboard', this)"><span class="material-symbols-outlined">home</span>Início</a>
+        <a class="nav-item" onclick="navTo('folders', this)"><span class="material-symbols-outlined">folder</span>Pastas</a>
+        <a class="nav-item" onclick="navTo('profile', this)"><span class="material-symbols-outlined">person</span>Perfil</a>
+    </nav>
+
+    <!-- ================= JAVASCRIPT GERAL E UI ================= -->
+    <script>
+        // Navegação
+        function navTo(viewName, navElement = null) {
+            document.querySelectorAll('.view').forEach(v => { v.classList.remove('active'); v.classList.add('hidden'); });
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            if(navElement) {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                navElement.classList.add('active');
+            }
+        }
+
+        // Sistema de Perfil LocalStorage
+        function loadProfile() {
+            const profile = JSON.parse(localStorage.getItem('userProfile')) || { name: 'Fabiano', email: '', phone: '', gender: '', avatar: '' };
+            document.getElementById('prof-name').value = profile.name;
+            document.getElementById('prof-email').value = profile.email;
+            document.getElementById('prof-phone').value = profile.phone;
+            document.getElementById('prof-gender').value = profile.gender;
+            
+            const firstName = profile.name.split(' ')[0] || 'Usuário';
+            document.getElementById('dash-name').innerText = `Olá, ${firstName}`;
+            
+            if(profile.avatar) {
+                document.querySelectorAll('.display-avatar').forEach(img => { img.src = profile.avatar; img.style.display = 'block'; });
+                document.querySelectorAll('.display-initials').forEach(div => div.style.display = 'none');
+                document.getElementById('profile-preview').src = profile.avatar;
+                document.getElementById('profile-preview').style.display = 'block';
+                document.getElementById('profile-initials').style.display = 'none';
+            }
+        }
+        function saveProfile() {
+            const profile = {
+                name: document.getElementById('prof-name').value,
+                email: document.getElementById('prof-email').value,
+                phone: document.getElementById('prof-phone').value,
+                gender: document.getElementById('prof-gender').value,
+                avatar: document.getElementById('profile-preview').src || ''
+            };
+            localStorage.setItem('userProfile', JSON.stringify(profile));
+            loadProfile();
+            alert('Perfil salvo!');
+        }
+
+        document.getElementById('avatar-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('profile-preview').src = event.target.result;
+                    document.getElementById('profile-preview').style.display = 'block';
+                    document.getElementById('profile-initials').style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Sistema de Histórico
+        let transcriptions = JSON.parse(localStorage.getItem('transcriptions')) || [];
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            
+            if(transcriptions.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-secondary); padding: 20px;">Nenhuma transcrição ainda.</p>';
+                return;
+            }
+
+            for(let i = transcriptions.length - 1; i >= 0; i--) {
+                const item = transcriptions[i];
+                let iconHTML = '';
+                if(item.source === 'whatsapp') {
+                    iconHTML = `<div class="icon icon-whatsapp"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg></div>`;
+                } else if(item.source === 'upload') {
+                    iconHTML = `<div class="icon icon-recorded"><span class="material-symbols-outlined">description</span></div>`;
+                } else {
+                    iconHTML = `<div class="icon icon-recorded"><span class="material-symbols-outlined">mic</span></div>`;
+                }
+
+                container.innerHTML += `
+                    <div class="history-item">
+                        ${iconHTML}
+                        <div class="details">
+                            <h4>${item.title}</h4>
+                            <p>${item.date} • ${item.duration} min</p>
+                        </div>
+                        <button class="icon-btn" onclick="deleteTranscription(${i})">
+                            <span class="material-symbols-outlined" style="color: var(--danger-color)">delete</span>
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        window.deleteTranscription = function(index) {
+            if(confirm('Tem certeza que deseja excluir esta transcrição?')) {
+                transcriptions.splice(index, 1);
+                localStorage.setItem('transcriptions', JSON.stringify(transcriptions));
+                renderHistory();
+            }
+        };
+
+        function saveNewTranscription(duration, source) {
+            const date = new Date();
+            const timeString = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            let title = source === 'whatsapp' ? "Áudio do WhatsApp" : source === 'upload' ? "Arquivo Enviado" : "Nova Gravação";
+            transcriptions.push({ title: title, date: `Hoje, ${timeString}`, duration: duration, source: source });
+            localStorage.setItem('transcriptions', JSON.stringify(transcriptions));
+            renderHistory();
+        }
+
+        document.getElementById('toggle-history').addEventListener('click', () => {
+            const content = document.getElementById('history-container');
+            const icon = document.getElementById('toggle-icon');
+            content.classList.toggle('collapsed');
+            icon.innerText = content.classList.contains('collapsed') ? 'expand_more' : 'expand_less';
+        });
+
+        // =====================================================================
+        // LÓGICA DE GRAVAÇÃO REAL E ENVIO PARA O BACKEND NO RENDER
+        // =====================================================================
+        let timerInterval, visualizerAnimation, seconds = 0, amplitudes = new Array(40).fill(0);
+        let mediaRecorder;
+        let audioChunks = [];
+
+        function formatTime(sec) { return `${Math.floor(sec/60).toString().padStart(2,'0')}:${(sec%60).toString().padStart(2,'0')}`; }
+
+        function startVisualizer() {
+            const canvas = document.getElementById('audio-visualizer');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+            const centerY = canvas.height / 2, barWidth = (canvas.width / 40) - 2;
+
+            function draw() {
+                amplitudes.shift(); amplitudes.push(Math.random() * (canvas.height / 2 - 10));
+                ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#3B82F6';
+                amplitudes.forEach((amp, i) => {
+                    if(amp > 0) { ctx.beginPath(); ctx.roundRect(i * (barWidth + 2), centerY - amp, barWidth, amp * 2, 4); ctx.fill(); }
+                });
+                visualizerAnimation = requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // INICIAR GRAVAÇÃO
+        document.getElementById('btn-start-record').addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const duration = formatTime(seconds);
+                    await sendToBackend(audioBlob, 'gravacao.webm', duration, 'recorded');
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                navTo('recording'); seconds = 0; document.getElementById('record-time').innerText = "00:00";
+                timerInterval = setInterval(() => { seconds++; document.getElementById('record-time').innerText = formatTime(seconds); }, 1000);
+                startVisualizer();
+                mediaRecorder.start();
+            } catch (err) {
+                alert("Erro ao acessar o microfone. Verifique as permissões. Erro: " + err.message);
+            }
+        });
+
+        // CANCELAR GRAVAÇÃO
+        document.getElementById('btn-cancel-record').addEventListener('click', () => { 
+            clearInterval(timerInterval); cancelAnimationFrame(visualizerAnimation); 
+            if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            navTo('dashboard'); 
+        });
+
+        // FINALIZAR GRAVAÇÃO
+        document.getElementById('btn-stop-record').addEventListener('click', () => {
+            clearInterval(timerInterval); cancelAnimationFrame(visualizerAnimation);
+            if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        });
+
+        // UPLOAD ARQUIVO OU WHATSAPP
+        window.handleFileUpload = function(event, source) {
+            if(event.target.files.length > 0) { 
+                const file = event.target.files[0];
+                sendToBackend(file, file.name, "00:00", source); 
+                event.target.value = ''; 
+            }
+        }
+
+        // COMUNICAÇÃO COM O BACKEND OFICIAL NO RENDER
+        async function sendToBackend(audioFile, fileName, duration, source) {
+            navTo('result');
+            document.getElementById('processing-state').classList.remove('hidden'); 
+            document.getElementById('processing-state').classList.add('active');
+            document.getElementById('result-state').classList.add('hidden'); 
+            document.getElementById('process-progress').style.width = "50%";
+            document.getElementById('process-status').innerText = "Enviando para a IA no Render...";
+
+            const formData = new FormData();
+            formData.append('audio_file', audioFile, fileName);
+
+            try {
+                // URL oficial atualizada apontando para o Render
+                const BACKEND_URL = 'https://transcreve-backeng.onrender.com';
+
+                const response = await fetch(`${BACKEND_URL}/api/transcrever`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('process-progress').style.width = "100%";
+                    document.getElementById('processing-state').classList.remove('active'); 
+                    document.getElementById('processing-state').classList.add('hidden');
+                    document.getElementById('result-state').classList.remove('hidden');
+                    
+                    document.getElementById('final-text').innerText = data.text;
+                    document.getElementById('audio-duration').innerText = duration;
+                    
+                    saveNewTranscription(duration, source);
+                } else {
+                    throw new Error(data.error || "Erro desconhecido.");
+                }
+            } catch (error) {
+                alert("Erro na conexão com o Backend: " + error.message + ". Nota: Servidores gratuitos no Render podem demorar alguns segundos para acordar na primeira requisição.");
+                navTo('dashboard');
+            }
+        }
+
+        // Inicializar aplicação
+        window.onload = () => { loadProfile(); renderHistory(); };
+    </script>
+</body>
+</html>
