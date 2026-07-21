@@ -126,6 +126,7 @@
                         WhatsApp
                     </button>
                 </div>
+                <!-- Inputs de Arquivo Atualizados -->
                 <input type="file" id="file-input" accept="audio/*" hidden onchange="handleFileUpload(event, 'upload')">
                 <input type="file" id="wa-input" accept="audio/*" hidden onchange="handleFileUpload(event, 'whatsapp')">
             </div>
@@ -200,12 +201,7 @@
                 <div class="progress-bar" style="max-width: 300px; margin: 0 auto;"><div id="process-progress" class="fill" style="width: 0%;"></div></div>
             </div>
             <div id="result-state" class="result-container hidden">
-                <div style="display:flex; gap:8px; margin-bottom:16px;">
-                    <span class="badge" style="font-size:0.75rem; padding:4px 12px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:16px;">Português</span>
-                    <span class="badge" id="audio-duration" style="font-size:0.75rem; padding:4px 12px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:16px;">00:00</span>
-                </div>
                 <div class="text-editor" contenteditable="true" id="final-text"></div>
-                <button class="btn-secondary" onclick="alert('Texto copiado!')" style="margin-bottom: 12px;"><span class="material-symbols-outlined">content_copy</span> Copiar Texto</button>
                 <button class="btn-primary" onclick="navTo('dashboard')">Concluir</button>
             </div>
         </section>
@@ -218,9 +214,8 @@
         <a class="nav-item" onclick="navTo('profile', this)"><span class="material-symbols-outlined">person</span>Perfil</a>
     </nav>
 
-    <!-- ================= JAVASCRIPT GERAL E UI ================= -->
+    <!-- ================= JAVASCRIPT ================= -->
     <script>
-        // Navegação
         function navTo(viewName, navElement = null) {
             document.querySelectorAll('.view').forEach(v => { v.classList.remove('active'); v.classList.add('hidden'); });
             document.getElementById(`view-${viewName}`).classList.remove('hidden');
@@ -231,7 +226,7 @@
             }
         }
 
-        // Sistema de Perfil LocalStorage
+        // --- SISTEMA DE PERFIL ---
         function loadProfile() {
             const profile = JSON.parse(localStorage.getItem('userProfile')) || { name: 'Fabiano', email: '', phone: '', gender: '', avatar: '' };
             document.getElementById('prof-name').value = profile.name;
@@ -276,7 +271,7 @@
             }
         });
 
-        // Sistema de Histórico
+        // --- SISTEMA DE TRANSCRIÇÕES ---
         let transcriptions = JSON.parse(localStorage.getItem('transcriptions')) || [];
 
         function renderHistory() {
@@ -338,9 +333,7 @@
             icon.innerText = content.classList.contains('collapsed') ? 'expand_more' : 'expand_less';
         });
 
-        // =====================================================================
-        // LÓGICA DE GRAVAÇÃO REAL E ENVIO PARA O BACKEND NO RENDER
-        // =====================================================================
+        // --- GRAVAÇÃO REAL COM MEDIARECORDER ---
         let timerInterval, visualizerAnimation, seconds = 0, amplitudes = new Array(40).fill(0);
         let mediaRecorder;
         let audioChunks = [];
@@ -364,98 +357,109 @@
             draw();
         }
 
-        // INICIAR GRAVAÇÃO
         document.getElementById('btn-start-record').addEventListener('click', async () => {
             try {
+                // Solicita permissão do microfone
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) audioChunks.push(event.data);
                 };
 
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const duration = formatTime(seconds);
-                    await sendToBackend(audioBlob, 'gravacao.webm', duration, 'recorded');
-                    stream.getTracks().forEach(track => track.stop());
-                };
+                mediaRecorder.start();
 
                 navTo('recording'); seconds = 0; document.getElementById('record-time').innerText = "00:00";
                 timerInterval = setInterval(() => { seconds++; document.getElementById('record-time').innerText = formatTime(seconds); }, 1000);
                 startVisualizer();
-                mediaRecorder.start();
             } catch (err) {
-                alert("Erro ao acessar o microfone. Verifique as permissões. Erro: " + err.message);
+                alert("Permissão de microfone necessária para gravar.");
+                console.error(err);
             }
         });
 
-        // CANCELAR GRAVAÇÃO
         document.getElementById('btn-cancel-record').addEventListener('click', () => { 
-            clearInterval(timerInterval); cancelAnimationFrame(visualizerAnimation); 
-            if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if(mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+            clearInterval(timerInterval); 
+            cancelAnimationFrame(visualizerAnimation); 
             navTo('dashboard'); 
         });
 
-        // FINALIZAR GRAVAÇÃO
         document.getElementById('btn-stop-record').addEventListener('click', () => {
-            clearInterval(timerInterval); cancelAnimationFrame(visualizerAnimation);
-            if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            const duration = formatTime(seconds); 
+            clearInterval(timerInterval); 
+            cancelAnimationFrame(visualizerAnimation);
+            
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.onstop = () => {
+                    // Cria o blob do áudio gravado
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); 
+                    startProcessingFlow(duration, 'recorded', audioBlob);
+                };
+                mediaRecorder.stop();
+            }
         });
 
-        // UPLOAD ARQUIVO OU WHATSAPP
+        // Captura o arquivo de upload e envia para processamento
         window.handleFileUpload = function(event, source) {
             if(event.target.files.length > 0) { 
                 const file = event.target.files[0];
-                sendToBackend(file, file.name, "00:00", source); 
+                startProcessingFlow("00:00", source, file); 
                 event.target.value = ''; 
             }
         }
 
-        // COMUNICAÇÃO COM O BACKEND OFICIAL NO RENDER
-        async function sendToBackend(audioFile, fileName, duration, source) {
+        // --- INTEGRAÇÃO REAL COM O RENDER ---
+        async function startProcessingFlow(duration, source, audioData) {
             navTo('result');
             document.getElementById('processing-state').classList.remove('hidden'); 
             document.getElementById('processing-state').classList.add('active');
             document.getElementById('result-state').classList.add('hidden'); 
+            
             document.getElementById('process-progress').style.width = "50%";
-            document.getElementById('process-status').innerText = "Enviando para a IA no Render...";
-
-            const formData = new FormData();
-            formData.append('audio_file', audioFile, fileName);
-
+            document.getElementById('process-status').innerText = "Enviando para a Nuvem...";
+            
             try {
-                // URL oficial atualizada apontando para o Render
-                const BACKEND_URL = 'https://transcreve-backeng.onrender.com';
+                const formData = new FormData();
+                // 'audio' é o nome do campo. Precisa ser o mesmo configurado no Multer do backend
+                formData.append('audio', audioData);
 
-                const response = await fetch(`${BACKEND_URL}/api/transcrever`, {
+                // SUBSTITUÍDO PELO LINK DO SEU BACKEND NO RENDER
+                const response = await fetch('https://transcreve-backeng.onrender.com/upload', {
                     method: 'POST',
                     body: formData
                 });
 
-                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error('Falha ao processar no servidor');
+                }
 
-                if (data.success) {
-                    document.getElementById('process-progress').style.width = "100%";
+                const data = await response.json();
+                
+                document.getElementById('process-progress').style.width = "100%";
+                document.getElementById('process-status').innerText = "Transcrição Concluída!";
+
+                setTimeout(() => {
                     document.getElementById('processing-state').classList.remove('active'); 
                     document.getElementById('processing-state').classList.add('hidden');
                     document.getElementById('result-state').classList.remove('hidden');
                     
-                    document.getElementById('final-text').innerText = data.text;
-                    document.getElementById('audio-duration').innerText = duration;
-                    
+                    // Exibe o texto retornado pela API
+                    document.getElementById('final-text').innerText = data.transcription || data.text || "Áudio processado com sucesso, mas a API não retornou texto.";
                     saveNewTranscription(duration, source);
-                } else {
-                    throw new Error(data.error || "Erro desconhecido.");
-                }
+                }, 800);
+
             } catch (error) {
-                alert("Erro na conexão com o Backend: " + error.message + ". Nota: Servidores gratuitos no Render podem demorar alguns segundos para acordar na primeira requisição.");
-                navTo('dashboard');
+                console.error("Erro no envio:", error);
+                document.getElementById('process-status').innerText = "Erro ao transcrever!";
+                document.getElementById('processing-state').classList.remove('active'); 
+                document.getElementById('processing-state').classList.add('hidden');
+                document.getElementById('result-state').classList.remove('hidden');
+                document.getElementById('final-text').innerText = "Ocorreu um erro de conexão com o servidor. Verifique o console ou tente novamente.";
             }
         }
 
-        // Inicializar aplicação
         window.onload = () => { loadProfile(); renderHistory(); };
     </script>
 </body>
