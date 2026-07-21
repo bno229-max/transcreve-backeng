@@ -1,71 +1,82 @@
-require('dotenv').config(); // Carrega as variáveis do arquivo .env ou do servidor
 const express = require('express');
-const multer = require('multer');
 const cors = require('cors');
-const fs = require('fs');
+const multer = require('multer');
+const { SpeechClient } = require('@google-cloud/speech');
 const { Storage } = require('@google-cloud/storage');
-const speech = require('@google-cloud/speech');
 
 const app = express();
 
-// Configura CORS para permitir acesso vindo do seu domínio da Vercel
-app.use(cors());
+// A MÁGICA AQUI: Isso libera o navegador para enviar o áudio sem dar erro de CORS
+app.use(cors()); 
+app.use(express.json());
 
-// Usa a pasta /tmp para compatibilidade com servidores na nuvem
-const upload = multer({ dest: '/tmp/' });
+// Configurando o Multer para receber o arquivo de áudio na memória
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Configuração das credenciais do Google via Variável de Ambiente
-const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-const projectId = credentials.project_id;
-const bucketName = process.env.GOOGLE_BUCKET_NAME || 'transcreve-ai-audios';
+// Configuração do Google Cloud usando as variáveis de ambiente que você colocou no Render
+let credentialsObj = {};
+if (process.env.GOOGLE_CREDENTIALS) {
+    try {
+        credentialsObj = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    } catch (e) {
+        console.error("Erro ao ler as credenciais do Google. Verifique a variável no Render.");
+    }
+}
 
-const storage = new Storage({ projectId, credentials });
-const speechClient = new speech.SpeechClient({ projectId, credentials });
+const speechClient = new SpeechClient({ credentials: credentialsObj });
+const storage = new Storage({ credentials: credentialsObj });
+const bucketName = process.env.GOOGLE_BUCKET_NAME || 'seu-bucket-padrao';
 
-app.post('/api/transcrever', upload.single('audio_file'), async (req, res) => {
+// Rota principal de upload e transcrição
+app.post('/upload', upload.single('audio'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado.' });
+            return res.status(400).json({ error: 'Nenhum arquivo de áudio foi enviado.' });
         }
 
-        const filePath = req.file.path;
-        const destination = `${Date.now()}_${req.file.originalname || 'audio.webm'}`;
+        console.log("Áudio recebido, iniciando processamento...");
 
-        // 1. Upload para o Google Storage
-        await storage.bucket(bucketName).upload(filePath, { destination });
-        const gcsUri = `gs://${bucketName}/${destination}`;
+        const audioBytes = req.file.buffer.toString('base64');
 
-        // 2. Transcrição via Speech-to-Text
-        const request = {
-            audio: { uri: gcsUri },
-            config: {
-                encoding: 'WEBM_OPUS',
-                sampleRateHertz: 48000,
-                languageCode: 'pt-BR',
-                enableAutomaticPunctuation: true
-            }
+        const audio = {
+            content: audioBytes,
         };
 
-        const [operation] = await speechClient.longRunningRecognize(request);
-        const [response] = await operation.promise();
+        const config = {
+            encoding: 'WEBM_OPUS', // Ajuste conforme o formato de gravação do navegador
+            sampleRateHertz: 48000,
+            languageCode: 'pt-BR',
+        };
 
+        const request = {
+            audio: audio,
+            config: config,
+        };
+
+        // Chama a API do Google Speech-to-Text
+        const [response] = await speechClient.recognize(request);
         const transcription = response.results
             .map(result => result.alternatives[0].transcript)
             .join('\n');
 
-        // Limpa o arquivo temporário do servidor
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-
-        res.json({ success: true, text: transcription });
+        console.log("Transcrição concluída com sucesso!");
+        
+        // Retorna o texto para o frontend
+        res.json({ transcription: transcription });
 
     } catch (error) {
-        console.error("Erro no processamento:", error);
-        res.status(500).json({ success: false, error: 'Erro ao transcrever áudio: ' + error.message });
+        console.error("Erro durante a transcrição:", error);
+        res.status(500).json({ error: 'Falha interna no processamento do áudio.', detalhes: error.message });
     }
 });
 
-// Porta dinâmica para a nuvem
+// Rota de teste para ver se o servidor acordou no Render
+app.get('/', (req, res) => {
+    res.send("Servidor Transcreve.AI está online e rodando!");
+});
+
+// Inicialização do Servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});
