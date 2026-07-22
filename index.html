@@ -175,6 +175,7 @@
             content: ''; position: absolute; inset: 0; border-radius: 50%;
             border: 1px solid rgba(46, 99, 231, 0.22);
             transition: border-color 0.4s;
+            pointer-events: none; /* anéis decorativos não podem bloquear o toque no botão */
         }
         .rec-ring::after { inset: -14px; border-color: rgba(46, 99, 231, 0.1); }
         .rec-ring.recording::before { border-color: rgba(225, 29, 72, 0.35); animation: ringPulse 1.6s ease-out infinite; }
@@ -185,6 +186,7 @@
         }
 
         .neon-btn {
+            position: relative; z-index: 1; /* garante o botão acima de qualquer camada decorativa */
             width: 140px; height: 140px; border-radius: 50%;
             background: radial-gradient(circle at 30% 25%, #FFFFFF, #F2F6FF 70%);
             border: 2px solid var(--accent);
@@ -783,7 +785,7 @@
         }
 
         // --- Versão e diagnóstico ---
-        const APP_VERSION = '1.4';
+        const APP_VERSION = '1.5';
         document.getElementById('versionTag').innerText = 'Voz em texto · v' + APP_VERSION;
         document.getElementById('versionTag').addEventListener('click', async () => {
             let permState = 'não suportado';
