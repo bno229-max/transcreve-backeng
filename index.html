@@ -3,508 +3,1409 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voxpaper</title>
-    <meta name="theme-color" content="#F8FAFC">
+    <title>Voxpaper — Transcrições Inteligentes</title>
+    <meta name="description" content="Grave sua voz e transforme em texto na hora. Transcrição inteligente, organizada em pastas.">
+    <meta name="theme-color" content="#F4F6FB">
     <link rel="manifest" href="manifest.json">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Voxpaper">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-color: #F8FAFC; --surface-color: #FFFFFF; --text-primary: #0F172A; --text-secondary: #64748B;
-            --primary-color: #3B82F6; --danger-color: #EF4444; --premium-color: #8B5CF6; 
-            --border-color: #E2E8F0; --radius-sm: 8px; --radius-md: 16px; --radius-lg: 24px;
+            --bg: #F4F6FB;
+            --surface: #FFFFFF;
+            --surface-soft: #F0F4FB;
+            --border: #E4E9F3;
+            --border-strong: #D0D9E8;
+            --text-1: #111C33;
+            --text-2: #5B6884;
+            --text-3: #93A0B8;
+            --accent: #2E63E7;
+            --accent-2: #4F46E5;
+            --accent-sky: #41A7FF;
+            --danger: #E11D48;
+            --success: #059669;
+            --grad: linear-gradient(135deg, var(--accent-sky) 0%, var(--accent) 55%, var(--accent-2) 100%);
+            --radius: 18px;
+            --shadow-card: 0 10px 30px rgba(20, 40, 90, 0.07), 0 2px 6px rgba(20, 40, 90, 0.05);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-primary); -webkit-font-smoothing: antialiased; padding-bottom: 80px; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .view { display: none; animation: fadeIn 0.3s ease; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text-1);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 20px 110px;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- Fundo ambiente ---- */
+        .ambient {
+            position: fixed; inset: 0; z-index: -1;
+            background:
+                radial-gradient(ellipse 60% 40% at 15% -10%, rgba(65, 167, 255, 0.12), transparent 60%),
+                radial-gradient(ellipse 50% 40% at 90% 0%, rgba(79, 70, 229, 0.08), transparent 60%),
+                radial-gradient(ellipse 70% 50% at 50% 115%, rgba(46, 99, 231, 0.06), transparent 65%),
+                var(--bg);
+        }
+
+        .container { width: 100%; max-width: 640px; }
+
+        /* ---- Header ---- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 28px 0 26px;
+        }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo-mark {
+            width: 44px; height: 44px; border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(46, 99, 231, 0.28);
+            display: block;
+        }
+        .logo h1 {
+            font-family: 'Sora', sans-serif; font-size: 1.45rem; font-weight: 800;
+            letter-spacing: -0.03em;
+            background: var(--grad);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo .tagline { font-size: 0.72rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+        .plan-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 14px; border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 0.78rem; font-weight: 600; color: var(--text-1);
+            box-shadow: 0 2px 8px rgba(20, 40, 90, 0.06);
+            cursor: pointer;
+        }
+        .plan-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--grad); box-shadow: 0 0 6px rgba(46, 99, 231, 0.6); }
+
+        /* ---- Navegação por abas ---- */
+        .view { display: none; animation: viewIn 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
         .view.active { display: block; }
+        @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Top Bar & Avatar */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .user-info { display: flex; align-items: center; gap: 12px; }
-        .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; object-fit: cover; }
-        .user-info h1 { font-size: 1.1rem; }
-        .plan-badge { font-size: 0.8rem; background: rgba(139, 92, 246, 0.1); color: var(--premium-color); padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 4px; }
-
-        /* Card SaaS Minutos */
-        .usage-card { background: var(--surface-color); padding: 20px; border-radius: var(--radius-md); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid var(--border-color); }
-        .usage-card h3 { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px; display: flex; justify-content: space-between;}
-        .progress-bar { width: 100%; height: 8px; background: var(--bg-color); border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
-        #progress-fill { height: 100%; background: var(--primary-color); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
-
-        /* Botão Neon Redondo */
-        .recorder-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; }
-        .btn-neon {
-            width: 130px; height: 130px; border-radius: 50%; background: var(--surface-color);
-            border: 3px solid var(--primary-color); color: var(--primary-color);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 10px rgba(59, 130, 246, 0.2);
-            cursor: pointer; transition: all 0.3s ease; font-weight: bold; font-size: 1.1rem; gap: 4px;
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 80;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -6px 24px rgba(20, 40, 90, 0.06);
+            padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
         }
-        .btn-neon span { font-size: 36px; }
-        .btn-neon:active { transform: scale(0.95); }
-        .btn-neon.recording {
-            border-color: var(--danger-color); color: var(--danger-color);
-            box-shadow: 0 0 25px rgba(239, 68, 68, 0.5), inset 0 0 15px rgba(239, 68, 68, 0.3);
-            animation: pulse-neon 1.5s infinite;
+        .bottom-nav .nav-inner {
+            max-width: 640px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
         }
-        @keyframes pulse-neon { 0% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); } 50% { box-shadow: 0 0 35px rgba(239, 68, 68, 0.8); } 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); } }
-        
-        #status-msg { margin-top: 16px; color: var(--text-secondary); font-size: 0.95rem; font-weight: 500;}
+        .nav-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            padding: 8px 4px 6px; border: none; background: none; cursor: pointer;
+            border-radius: 14px; color: var(--text-3);
+            font-family: inherit; font-size: 0.68rem; font-weight: 600;
+            transition: color 0.2s, background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .nav-btn:hover { color: var(--text-2); }
+        .nav-btn.active { color: var(--accent); background: rgba(46, 99, 231, 0.08); }
 
-        /* Histórico */
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .section-header h2 { font-size: 1.1rem; }
-        .filter-select { padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--surface-color); outline: none; }
-        
-        .history-item { background: var(--surface-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .history-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .history-title-area { display: flex; align-items: center; gap: 8px; flex: 1; }
-        .history-title-area h4 { font-size: 1rem; color: var(--text-primary); margin: 0; }
-        
-        .icon-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; transition: background 0.2s;}
-        .icon-btn:hover { background: var(--bg-color); }
-        .icon-btn.star.active { color: #F59E0B; } 
-        
-        audio { width: 100%; height: 36px; margin-bottom: 12px; outline: none; }
-        .transcript-text { font-size: 0.9rem; color: var(--text-secondary); background: var(--bg-color); padding: 12px; border-radius: var(--radius-sm); line-height: 1.5; max-height: 150px; overflow-y: auto; margin-bottom: 12px;}
-        
-        .history-footer { display: flex; justify-content: space-between; align-items: center; }
-        .folder-tag-select { font-size: 0.8rem; padding: 4px 8px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--primary-color); outline: none; }
+        /* ---- Cartão base ---- */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+        }
 
-        /* Aba Pastas */
-        .folder-controls { display: flex; gap: 8px; margin-bottom: 24px; }
-        .folder-controls input { flex: 1; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); outline: none; }
-        .folder-controls button { background: var(--primary-color); color: white; border: none; padding: 0 20px; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; }
-        .folder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .folder-card { background: var(--surface-color); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
-        .folder-card .material-symbols-outlined { color: var(--primary-color); font-size: 32px; }
+        /* ---- Card SaaS / uso ---- */
+        .saas-card { padding: 22px; margin-bottom: 28px; position: relative; overflow: hidden; }
+        .saas-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: var(--grad);
+        }
+        .saas-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;}
+        .saas-user { display: flex; align-items: center; gap: 12px; }
+        .saas-avatar {
+            width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--border); background: var(--surface-soft);
+            display: none;
+        }
+        .saas-avatar.on { display: block; }
+        .saas-top h3 { font-size: 1.02rem; font-weight: 700; letter-spacing: -0.01em; }
+        .saas-top p { font-size: 0.82rem; color: var(--text-2); margin-top: 3px; }
+        .usage-numbers { text-align: right; }
+        .usage-numbers strong { font-family: 'Sora', sans-serif; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; color: var(--accent); }
+        .usage-numbers span { font-size: 0.78rem; color: var(--text-3); display: block; }
+        .progress-bar {
+            width: 100%; height: 9px; border-radius: 999px; overflow: hidden;
+            background: #E9EEF7;
+        }
+        #progressFill {
+            height: 100%; width: 0%; border-radius: 999px;
+            background: var(--grad);
+            transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .progress-hint { margin-top: 10px; font-size: 0.75rem; color: var(--text-3); display: flex; justify-content: space-between; }
 
-        /* Aba Perfil (Formulário Restaurado) */
-        .profile-img-container { position: relative; width: 100px; height: 100px; margin: 0 auto 24px auto; }
-        .profile-img-container img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color); }
-        .profile-img-container .edit-badge { position: absolute; bottom: 0; right: 0; background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 2px solid white; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
-        .form-control { width: 100%; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 1rem; background: var(--surface-color); color: var(--text-primary); outline: none; }
-        .btn-primary { background: var(--primary-color); color: white; padding: 14px 20px; width: 100%; font-size: 1rem; border-radius: var(--radius-md); border: none; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        .btn-primary:active { opacity: 0.8; }
+        /* ---- Gravador ---- */
+        .recorder-section {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 34px 22px 28px; margin-bottom: 28px;
+            position: relative;
+        }
+        .rec-ring {
+            position: relative; width: 168px; height: 168px;
+            display: grid; place-items: center;
+        }
+        .rec-ring::before, .rec-ring::after {
+            content: ''; position: absolute; inset: 0; border-radius: 50%;
+            border: 1px solid rgba(46, 99, 231, 0.22);
+            transition: border-color 0.4s;
+        }
+        .rec-ring::after { inset: -14px; border-color: rgba(46, 99, 231, 0.1); }
+        .rec-ring.recording::before { border-color: rgba(225, 29, 72, 0.35); animation: ringPulse 1.6s ease-out infinite; }
+        .rec-ring.recording::after { border-color: rgba(225, 29, 72, 0.15); animation: ringPulse 1.6s 0.4s ease-out infinite; }
+        @keyframes ringPulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.22); opacity: 0; }
+        }
 
-        /* Bottom Nav */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface-color); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 12px 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 1000; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--text-secondary); font-size: 0.75rem; font-weight: 500; cursor: pointer;}
-        .nav-item.active { color: var(--primary-color); }
-        
-        .upload-secondary { display: flex; justify-content: center; margin-top: 12px; }
-        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; cursor: pointer;}
+        .neon-btn {
+            width: 140px; height: 140px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 25%, #FFFFFF, #F2F6FF 70%);
+            border: 2px solid var(--accent);
+            color: var(--text-1);
+            font-family: 'Sora', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.02em;
+            cursor: pointer;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px;
+            box-shadow: 0 10px 28px rgba(46, 99, 231, 0.22), inset 0 0 20px rgba(65, 167, 255, 0.08);
+            transition: transform 0.15s ease, box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .neon-btn .ico { font-size: 2rem; line-height: 1; }
+        .neon-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(46, 99, 231, 0.3), inset 0 0 20px rgba(65, 167, 255, 0.12); }
+        .neon-btn:active { transform: scale(0.94); }
+        .neon-btn.recording {
+            border-color: var(--danger);
+            background: radial-gradient(circle at 30% 25%, #FFFFFF, #FFF0F3 70%);
+            box-shadow: 0 10px 30px rgba(225, 29, 72, 0.28), inset 0 0 22px rgba(225, 29, 72, 0.08);
+        }
+
+        #waveCanvas {
+            width: 100%; max-width: 380px; height: 56px; margin-top: 20px;
+            opacity: 0; transition: opacity 0.4s;
+        }
+        #waveCanvas.on { opacity: 1; }
+
+        #statusMsg {
+            margin-top: 8px; font-size: 0.88rem; color: var(--text-2);
+            min-height: 1.4em; text-align: center; transition: color 0.3s;
+        }
+        #statusMsg.rec { color: var(--danger); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        /* ---- Controles ---- */
+        .controls-wrap { display: flex; flex-direction: column; gap: 12px; margin-bottom: 26px; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .field {
+            flex: 1; min-width: 160px; position: relative; display: flex; align-items: center;
+        }
+        .field .f-ico { position: absolute; left: 14px; font-size: 0.9rem; opacity: 0.6; pointer-events: none; }
+        .controls input, .controls select, .form-grid input, .form-grid select {
+            width: 100%;
+            padding: 13px 14px 13px 40px;
+            border-radius: 13px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-1);
+            outline: none; font-size: 0.9rem; font-family: inherit;
+            box-shadow: 0 1px 4px rgba(20, 40, 90, 0.04);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            appearance: none; -webkit-appearance: none;
+        }
+        .controls select, .form-grid select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235B6884' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+        .controls input::placeholder, .form-grid input::placeholder { color: var(--text-3); }
+        .controls input:focus, .controls select:focus, .form-grid input:focus, .form-grid select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(46, 99, 231, 0.12);
+        }
+        .btn-primary {
+            padding: 13px 20px; border-radius: 13px; border: none;
+            background: var(--grad); color: #FFFFFF;
+            font-weight: 700; font-size: 0.88rem; font-family: inherit;
+            cursor: pointer; white-space: nowrap;
+            box-shadow: 0 6px 18px rgba(46, 99, 231, 0.3);
+            transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 8px 24px rgba(46, 99, 231, 0.38); }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-primary:disabled { opacity: 0.55; cursor: default; transform: none; }
+
+        /* ---- Seção / título ---- */
+        .section-head {
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin: 4px 2px 14px;
+        }
+        .section-head h2 { font-family: 'Sora', sans-serif; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+        .section-head span { font-size: 0.78rem; color: var(--text-3); }
+        .view-title { font-family: 'Sora', sans-serif; font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+        .view-sub { font-size: 0.86rem; color: var(--text-2); margin-bottom: 22px; }
+
+        /* ---- Lista de transcrições ---- */
+        .transcription-list { display: flex; flex-direction: column; gap: 16px; }
+
+        .transcription-card {
+            padding: 18px; position: relative; overflow: hidden;
+            animation: cardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .transcription-card:hover { border-color: var(--border-strong); box-shadow: 0 14px 34px rgba(20, 40, 90, 0.1); }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+        .card-title {
+            font-weight: 600; font-size: 0.97rem; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; line-height: 1.35;
+            word-break: break-word; transition: color 0.2s;
+        }
+        .card-title:hover { color: var(--accent); }
+        .card-title .edit-hint { font-size: 0.75rem; opacity: 0; transition: opacity 0.2s; }
+        .card-title:hover .edit-hint { opacity: 0.7; }
+        .card-meta { font-size: 0.74rem; color: var(--text-3); margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .folder-chip {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 9px; border-radius: 999px;
+            background: rgba(79, 70, 229, 0.07); border: 1px solid rgba(79, 70, 229, 0.22);
+            color: var(--accent-2); font-weight: 600;
+        }
+
+        .card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+        .icon-btn {
+            width: 34px; height: 34px; border-radius: 10px;
+            border: 1px solid transparent; background: transparent;
+            font-size: 1rem; cursor: pointer; display: grid; place-items: center;
+            color: var(--text-2);
+            filter: grayscale(100%); opacity: 0.65;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .icon-btn:hover { background: var(--surface-soft); border-color: var(--border); opacity: 1; }
+        .icon-btn.active { filter: grayscale(0%); opacity: 1; }
+        .icon-btn.danger:hover { border-color: rgba(225, 29, 72, 0.35); background: rgba(225, 29, 72, 0.07); filter: grayscale(0%); }
+
+        audio {
+            width: 100%; height: 40px; margin-bottom: 12px; outline: none;
+            border-radius: 12px;
+        }
+
+        .transcription-text {
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            padding: 14px; border-radius: 13px;
+            font-size: 0.89rem; line-height: 1.65; color: #2A3550;
+            max-height: 220px; overflow-y: auto;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .transcription-text:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46, 99, 231, 0.1); background: #FFFFFF; }
+        .transcription-text::-webkit-scrollbar { width: 6px; }
+        .transcription-text::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+        .card-footer { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .chip-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 13px; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--surface);
+            color: var(--text-2); font-size: 0.76rem; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .chip-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(46, 99, 231, 0.05); }
+        .folder-select {
+            margin-left: auto; padding: 6px 26px 6px 10px; border-radius: 999px;
+            background: var(--surface); color: var(--text-2);
+            border: 1px solid var(--border); font-size: 0.76rem; font-family: inherit;
+            cursor: pointer; outline: none; appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235B6884' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 8px center;
+        }
+
+        /* ---- Estado vazio ---- */
+        .empty-state {
+            text-align: center; padding: 48px 20px; color: var(--text-3);
+            border: 1px dashed var(--border-strong); border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.6);
+        }
+        .empty-state .big { font-size: 2.2rem; margin-bottom: 10px; opacity: 0.8; }
+        .empty-state p { font-size: 0.88rem; line-height: 1.5; }
+        .empty-state strong { color: var(--text-2); }
+
+        /* ---- Aba Pastas ---- */
+        .upload-zone {
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            padding: 30px 20px; margin-bottom: 26px; text-align: center;
+            border: 2px dashed var(--border-strong); border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.7); cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .upload-zone:hover { border-color: var(--accent); background: rgba(46, 99, 231, 0.04); }
+        .upload-zone .up-ico {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: rgba(46, 99, 231, 0.1); color: var(--accent);
+            display: grid; place-items: center; font-size: 1.4rem;
+        }
+        .upload-zone strong { font-size: 0.95rem; }
+        .upload-zone span { font-size: 0.8rem; color: var(--text-3); }
+        .upload-dest { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.8rem; color: var(--text-2); }
+
+        .folder-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px; margin-bottom: 10px;
+        }
+        .folder-row .fr-ico {
+            width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+            background: rgba(46, 99, 231, 0.09); color: var(--accent);
+            display: grid; place-items: center; font-size: 1.1rem;
+        }
+        .folder-row .fr-info { flex: 1; min-width: 0; }
+        .folder-row .fr-info strong { font-size: 0.93rem; display: block; }
+        .folder-row .fr-info span { font-size: 0.76rem; color: var(--text-3); }
+
+        /* ---- Aba Perfil ---- */
+        .profile-card { padding: 26px 22px; }
+        .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 24px; }
+        .avatar-circle {
+            width: 108px; height: 108px; border-radius: 50%; position: relative; cursor: pointer;
+            border: 3px solid #fff; box-shadow: 0 8px 24px rgba(20, 40, 90, 0.16);
+            background: var(--surface-soft); overflow: visible;
+        }
+        .avatar-circle img {
+            width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+        }
+        .avatar-circle .avatar-placeholder {
+            width: 100%; height: 100%; border-radius: 50%;
+            display: grid; place-items: center; font-size: 2.4rem; color: var(--text-3);
+            background: linear-gradient(135deg, #EDF2FB, #E2E9F7);
+        }
+        .avatar-badge {
+            position: absolute; right: -2px; bottom: -2px;
+            width: 34px; height: 34px; border-radius: 50%;
+            background: var(--grad); color: #fff; font-size: 0.9rem;
+            display: grid; place-items: center; border: 3px solid #fff;
+            box-shadow: 0 4px 12px rgba(46, 99, 231, 0.4);
+        }
+        .avatar-wrap span { font-size: 0.78rem; color: var(--text-3); }
+        .form-grid { display: flex; flex-direction: column; gap: 14px; }
+        .form-grid label { font-size: 0.78rem; font-weight: 600; color: var(--text-2); display: block; margin-bottom: 6px; }
+        .form-grid input, .form-grid select { padding-left: 14px; }
+        .form-actions { margin-top: 22px; display: flex; }
+        .form-actions .btn-primary { flex: 1; padding: 15px; font-size: 0.95rem; }
+
+        /* ---- Aba Planos ---- */
+        .plans-grid { display: flex; flex-direction: column; gap: 16px; }
+        .plan-card { padding: 22px; position: relative; overflow: hidden; transition: border-color 0.25s, box-shadow 0.25s; }
+        .plan-card.featured { border-color: rgba(46, 99, 231, 0.45); box-shadow: 0 14px 38px rgba(46, 99, 231, 0.14); }
+        .plan-card.featured::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: var(--grad);
+        }
+        .plan-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .plan-name { font-family: 'Sora', sans-serif; font-size: 1.05rem; font-weight: 700; }
+        .plan-tag {
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+            padding: 4px 10px; border-radius: 999px;
+        }
+        .plan-tag.current { background: rgba(5, 150, 105, 0.1); color: var(--success); border: 1px solid rgba(5, 150, 105, 0.3); }
+        .plan-tag.popular { background: var(--grad); color: #fff; }
+        .plan-price { margin: 8px 0 2px; }
+        .plan-price strong { font-family: 'Sora', sans-serif; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; }
+        .plan-price small { font-size: 0.8rem; color: var(--text-3); font-weight: 500; }
+        .plan-minutes { font-size: 0.85rem; color: var(--accent); font-weight: 700; margin-bottom: 12px; }
+        .plan-feats { list-style: none; margin-bottom: 16px; }
+        .plan-feats li {
+            font-size: 0.84rem; color: var(--text-2); padding: 5px 0 5px 26px; position: relative;
+        }
+        .plan-feats li::before {
+            content: '✓'; position: absolute; left: 2px; top: 5px;
+            color: var(--success); font-weight: 700;
+        }
+        .plan-card .btn-primary { width: 100%; padding: 14px; }
+        .btn-outline {
+            width: 100%; padding: 14px; border-radius: 13px;
+            border: 1.5px solid var(--accent); background: transparent; color: var(--accent);
+            font-weight: 700; font-size: 0.88rem; font-family: inherit; cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .btn-outline:hover { background: rgba(46, 99, 231, 0.06); transform: translateY(-1px); }
+        .addon-card {
+            display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+            background: linear-gradient(135deg, rgba(65, 167, 255, 0.08), rgba(79, 70, 229, 0.08));
+            border: 1px solid rgba(46, 99, 231, 0.25);
+        }
+        .addon-card .ad-ico {
+            width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+            background: var(--grad); color: #fff; display: grid; place-items: center; font-size: 1.2rem;
+            box-shadow: 0 6px 16px rgba(46, 99, 231, 0.3);
+        }
+        .addon-card .ad-info { flex: 1; }
+        .addon-card .ad-info strong { font-size: 0.93rem; display: block; }
+        .addon-card .ad-info span { font-size: 0.78rem; color: var(--text-2); }
+        .addon-card .btn-primary { width: auto; padding: 11px 18px; }
+
+        /* ---- Toasts ---- */
+        #toastZone {
+            position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; gap: 8px; z-index: 100;
+            width: min(92vw, 420px); pointer-events: none;
+        }
+        .toast {
+            padding: 13px 18px; border-radius: 13px;
+            background: #FFFFFF;
+            border: 1px solid var(--border-strong);
+            font-size: 0.85rem; font-weight: 500; text-align: center; color: var(--text-1);
+            box-shadow: 0 12px 34px rgba(20, 40, 90, 0.18);
+            animation: toastIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .toast.success { border-color: rgba(5, 150, 105, 0.4); color: var(--success); }
+        .toast.error { border-color: rgba(225, 29, 72, 0.4); color: var(--danger); }
+        .toast.out { animation: toastOut 0.3s forwards; }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        @keyframes toastOut { to { opacity: 0; transform: translateY(10px); } }
+
+        /* ---- Modal ---- */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 90;
+            background: rgba(17, 28, 51, 0.4); backdrop-filter: blur(4px);
+            display: none; place-items: center; padding: 20px;
+        }
+        .modal-overlay.open { display: grid; animation: toastIn 0.25s; }
+        .modal {
+            width: 100%; max-width: 400px; padding: 24px;
+            background: #FFFFFF; border: 1px solid var(--border);
+            border-radius: 20px; box-shadow: 0 24px 60px rgba(17, 28, 51, 0.25);
+        }
+        .modal h3 { font-family: 'Sora', sans-serif; font-size: 1.05rem; margin-bottom: 6px; }
+        .modal p { font-size: 0.83rem; color: var(--text-2); margin-bottom: 16px; }
+        .modal input {
+            width: 100%; padding: 13px 14px; border-radius: 12px;
+            border: 1px solid var(--border-strong); background: var(--surface-soft);
+            color: var(--text-1); font-size: 0.92rem; font-family: inherit; outline: none;
+            margin-bottom: 18px;
+        }
+        .modal input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46, 99, 231, 0.12); background: #fff; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .btn-ghost {
+            padding: 11px 18px; border-radius: 12px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-2); font-weight: 600; font-size: 0.85rem;
+            font-family: inherit; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-ghost:hover { border-color: var(--border-strong); color: var(--text-1); background: var(--surface-soft); }
+        .btn-danger-solid {
+            padding: 11px 18px; border-radius: 12px; border: none;
+            background: var(--danger); color: #fff; font-weight: 700; font-size: 0.85rem;
+            font-family: inherit; cursor: pointer;
+        }
+
+        @media (max-width: 460px) {
+            header { padding-top: 20px; }
+            .usage-numbers { text-align: left; }
+        }
     </style>
 </head>
 <body>
+    <div class="ambient"></div>
+
     <div class="container">
-        
-        <!-- ================= ABA: INÍCIO ================= -->
-        <section id="view-dashboard" class="view active">
-            <header class="top-bar">
-                <div class="user-info">
-                    <img src="" alt="Avatar" class="avatar display-avatar" id="dash-avatar" style="display:none;">
-                    <div class="avatar display-initials" id="dash-initials">F</div>
-                    <div>
-                        <h1 id="dash-name">Olá, Fabiano</h1>
-                        <span id="plan-badge" class="plan-badge">Plano Grátis</span>
+        <header>
+            <div class="logo">
+                <img class="logo-mark" src="icons/icon-192.png" alt="Voxpaper">
+                <div>
+                    <h1>Voxpaper</h1>
+                    <div class="tagline">Voz em texto, na hora</div>
+                </div>
+            </div>
+            <div class="plan-badge" onclick="switchView('planos')"><span class="dot"></span> Plano <span id="currentPlan">Grátis</span></div>
+        </header>
+
+        <!-- ================= INÍCIO ================= -->
+        <section id="view-inicio" class="view active">
+            <div class="saas-card card">
+                <div class="saas-top">
+                    <div class="saas-user">
+                        <img id="saasAvatar" class="saas-avatar" alt="Foto de perfil">
+                        <div>
+                            <h3>Olá, <span id="greetName">Fabiano</span> 👋</h3>
+                            <p>Seu consumo de transcrição neste ciclo</p>
+                        </div>
+                    </div>
+                    <div class="usage-numbers">
+                        <strong><span id="minutesUsed">0</span> min</strong>
+                        <span>de <span id="minutesLimit">20</span> minutos</span>
                     </div>
                 </div>
-            </header>
-
-            <!-- Card SaaS -->
-            <div class="usage-card">
-                <h3>Minutos Utilizados <span id="minutes-text">0 / 20 min</span></h3>
-                <div class="progress-bar"><div id="progress-fill"></div></div>
-                <p style="font-size: 0.8rem; color: var(--text-secondary); margin:0;">Grave mais para evoluir seu plano automaticamente.</p>
+                <div class="progress-bar"><div id="progressFill"></div></div>
+                <div class="progress-hint">
+                    <span id="progressHint">Você está no início do seu plano</span>
+                    <span id="progressPct">0%</span>
+                </div>
             </div>
 
-            <!-- Gravação Neon -->
-            <div class="recorder-section">
-                <button id="btn-record" class="btn-neon">
-                    <span class="material-symbols-outlined" id="record-icon">mic</span>
-                    <div id="record-label">Gravar</div>
-                </button>
-                <div id="status-msg">Pronto para gravar</div>
-                
-                <div class="upload-secondary">
-                    <button class="btn-outline" onclick="document.getElementById('file-upload').click()">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">upload_file</span> Enviar Arquivo
+            <section class="recorder-section card">
+                <div class="rec-ring" id="recRing">
+                    <button id="recordBtn" class="neon-btn" aria-label="Gravar áudio">
+                        <span class="ico">🎙️</span>
+                        <span id="recordLabel">Gravar</span>
                     </button>
-                    <input type="file" id="file-upload" accept="audio/*, video/mp4" hidden onchange="handleFileUpload(event)">
+                </div>
+                <canvas id="waveCanvas" width="760" height="112"></canvas>
+                <p id="statusMsg">Toque para iniciar a gravação</p>
+            </section>
+
+            <div class="controls-wrap">
+                <div class="controls">
+                    <div class="field">
+                        <span class="f-ico">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Buscar nas transcrições...">
+                    </div>
+                    <div class="field">
+                        <span class="f-ico">🗂️</span>
+                        <select id="folderFilter">
+                            <option value="all">Todas as Pastas</option>
+                            <option value="favorites">⭐ Favoritos</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <!-- Histórico -->
-            <div class="section-header">
-                <h2>Últimas Transcrições</h2>
-                <select id="filter-select" class="filter-select" onchange="renderHistory()">
-                    <option value="all">Todas</option>
-                    <option value="favorites">⭐ Favoritas</option>
-                    <option value="geral">Geral</option>
-                </select>
+            <div class="section-head">
+                <h2>Suas transcrições</h2>
+                <span id="countLabel"></span>
             </div>
-            <div id="history-container">
-                <!-- Cards renderizados via JS -->
-            </div>
+
+            <div id="transcriptionList" class="transcription-list"></div>
         </section>
 
-        <!-- ================= ABA: PASTAS ================= -->
-        <section id="view-folders" class="view">
-            <header class="top-bar"><h2>Minhas Pastas</h2></header>
-            <div class="folder-controls">
-                <input type="text" id="new-folder-input" placeholder="Nova pasta...">
-                <button onclick="createFolder()">Criar</button>
-            </div>
-            <div class="folder-grid" id="folders-grid">
-                <!-- Pastas via JS -->
-            </div>
-        </section>
+        <!-- ================= PASTAS ================= -->
+        <section id="view-pastas" class="view">
+            <h2 class="view-title">Pastas</h2>
+            <p class="view-sub">Organize suas transcrições e envie áudios já gravados.</p>
 
-        <!-- ================= ABA: PERFIL (Restaurada Completa) ================= -->
-        <section id="view-profile" class="view">
-            <header class="top-bar"><h2>Meu Perfil</h2></header>
-            
-            <div class="profile-img-container">
-                <img src="" alt="Avatar" id="profile-preview" style="display:none;">
-                <div id="profile-initials" style="width: 100%; height: 100%; border-radius: 50%; background: var(--primary-color); color: white; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; font-weight: bold;">F</div>
-                <label for="avatar-upload" class="edit-badge"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></label>
-                <input type="file" id="avatar-upload" accept="image/*" hidden>
-            </div>
-
-            <form id="profile-form">
-                <div class="form-group"><label>Nome Completo</label><input type="text" id="prof-name" class="form-control"></div>
-                <div class="form-group"><label>E-mail</label><input type="email" id="prof-email" class="form-control"></div>
-                <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="prof-phone" class="form-control"></div>
-                <div class="form-group"><label>Sexo</label>
-                    <select id="prof-gender" class="form-control">
-                        <option value="">Selecione...</option>
-                        <option value="masculino">Masculino</option>
-                        <option value="feminino">Feminino</option>
-                        <option value="outro">Outro</option>
-                    </select>
+            <div class="controls" style="margin-bottom: 22px;">
+                <div class="field">
+                    <span class="f-ico">📁</span>
+                    <input type="text" id="newFolderInput" placeholder="Nome da nova pasta..." maxlength="30">
                 </div>
-                <button type="button" class="btn-primary" onclick="saveProfile()" style="margin-top: 16px;">Salvar Alterações</button>
-            </form>
+                <button id="createFolderBtn" class="btn-primary">+ Criar Pasta</button>
+            </div>
+
+            <div class="upload-zone" id="uploadZone">
+                <div class="up-ico">⬆️</div>
+                <strong>Enviar áudio para transcrever</strong>
+                <span>Toque para escolher um arquivo de áudio (WhatsApp, gravações, etc.)</span>
+                <div class="upload-dest">
+                    Salvar na pasta:
+                    <select id="uploadFolderSelect" class="folder-select" style="margin-left: 0;" onclick="event.stopPropagation()"></select>
+                </div>
+                <input type="file" id="uploadInput" accept="audio/*" multiple hidden>
+            </div>
+
+            <div class="section-head">
+                <h2>Suas pastas</h2>
+                <span id="folderCountLabel"></span>
+            </div>
+            <div id="foldersList"></div>
         </section>
 
+        <!-- ================= PERFIL ================= -->
+        <section id="view-perfil" class="view">
+            <h2 class="view-title">Perfil</h2>
+            <p class="view-sub">Suas informações pessoais.</p>
+
+            <div class="profile-card card">
+                <div class="avatar-wrap">
+                    <div class="avatar-circle" id="avatarCircle" title="Alterar foto">
+                        <div class="avatar-placeholder" id="avatarPlaceholder">👤</div>
+                        <img id="avatarImg" alt="Foto de perfil" style="display:none;">
+                        <div class="avatar-badge">📷</div>
+                    </div>
+                    <span>Toque na foto para alterar</span>
+                    <input type="file" id="avatarInput" accept="image/*" hidden>
+                </div>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="profileName">Nome completo</label>
+                        <input type="text" id="profileName" placeholder="Seu nome" autocomplete="name">
+                    </div>
+                    <div>
+                        <label for="profilePhone">Telefone</label>
+                        <input type="tel" id="profilePhone" placeholder="(00) 00000-0000" autocomplete="tel">
+                    </div>
+                    <div>
+                        <label for="profileEmail">E-mail</label>
+                        <input type="email" id="profileEmail" placeholder="voce@email.com" autocomplete="email">
+                    </div>
+                    <div>
+                        <label for="profileGender">Sexo</label>
+                        <select id="profileGender">
+                            <option value="">Selecionar...</option>
+                            <option value="feminino">Feminino</option>
+                            <option value="masculino">Masculino</option>
+                            <option value="outro">Outro</option>
+                            <option value="nao-informar">Prefiro não informar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-primary" id="saveProfileBtn">Salvar perfil</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PLANOS ================= -->
+        <section id="view-planos" class="view">
+            <h2 class="view-title">Planos</h2>
+            <p class="view-sub">Escolha o plano ideal para o seu volume de transcrições.</p>
+
+            <div class="plans-grid">
+                <div class="plan-card card" data-plan="Grátis">
+                    <div class="plan-head">
+                        <span class="plan-name">Grátis</span>
+                        <span class="plan-tag current" style="display:none;">Seu plano</span>
+                    </div>
+                    <div class="plan-price"><strong>R$ 0</strong><small>/mês</small></div>
+                    <div class="plan-minutes">20 minutos de transcrição</div>
+                    <ul class="plan-feats">
+                        <li>Gravação direto do navegador</li>
+                        <li>Organização em pastas</li>
+                        <li>Recebe áudios compartilhados</li>
+                    </ul>
+                    <button class="btn-outline" onclick="choosePlan('Grátis')">Começar grátis</button>
+                </div>
+
+                <div class="plan-card card featured" data-plan="Starter">
+                    <div class="plan-head">
+                        <span class="plan-name">Starter</span>
+                        <span class="plan-tag popular">Mais popular</span>
+                        <span class="plan-tag current" style="display:none;">Seu plano</span>
+                    </div>
+                    <div class="plan-price"><strong>R$ 37,90</strong><small>/mês</small></div>
+                    <div class="plan-minutes">120 minutos de transcrição</div>
+                    <ul class="plan-feats">
+                        <li>Tudo do plano Grátis</li>
+                        <li>6x mais minutos por mês</li>
+                        <li>Upload de arquivos de áudio</li>
+                        <li>Suporte prioritário</li>
+                    </ul>
+                    <button class="btn-primary" onclick="choosePlan('Starter')">Assinar Starter</button>
+                </div>
+
+                <div class="plan-card card" data-plan="Pro">
+                    <div class="plan-head">
+                        <span class="plan-name">Pro</span>
+                        <span class="plan-tag current" style="display:none;">Seu plano</span>
+                    </div>
+                    <div class="plan-price"><strong>R$ 87,90</strong><small>/mês</small></div>
+                    <div class="plan-minutes">300 minutos de transcrição</div>
+                    <ul class="plan-feats">
+                        <li>Tudo do plano Starter</li>
+                        <li>Maior volume para uso intenso</li>
+                        <li>Ideal para profissionais e equipes</li>
+                    </ul>
+                    <button class="btn-primary" onclick="choosePlan('Pro')">Assinar Pro</button>
+                </div>
+
+                <div class="addon-card card">
+                    <div class="ad-ico">⏱️</div>
+                    <div class="ad-info">
+                        <strong>Minutos adicionais</strong>
+                        <span>+15 minutos avulsos por R$ 9,90</span>
+                    </div>
+                    <button class="btn-primary" onclick="buyAddon()">Comprar</button>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <!-- Navegação Inferior -->
+    <!-- ================= NAVBAR ================= -->
     <nav class="bottom-nav">
-        <a class="nav-item active" onclick="navTo('dashboard', this)"><span class="material-symbols-outlined">home</span>Início</a>
-        <a class="nav-item" onclick="navTo('folders', this)"><span class="material-symbols-outlined">folder</span>Pastas</a>
-        <a class="nav-item" onclick="navTo('profile', this)"><span class="material-symbols-outlined">person</span>Perfil</a>
+        <div class="nav-inner">
+            <button class="nav-btn active" data-view="inicio" onclick="switchView('inicio')">
+                <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>
+                Início
+            </button>
+            <button class="nav-btn" data-view="pastas" onclick="switchView('pastas')">
+                <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                Pastas
+            </button>
+            <button class="nav-btn" data-view="perfil" onclick="switchView('perfil')">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-3.9 3.6-6 8-6s8 2.1 8 6"/></svg>
+                Perfil
+            </button>
+            <button class="nav-btn" data-view="planos" onclick="switchView('planos')">
+                <svg viewBox="0 0 24 24"><path d="M3 17 5 7l5 4.5L12 5l2 6.5L19 7l2 10z"/><path d="M4 20h16"/></svg>
+                Planos
+            </button>
+        </div>
     </nav>
 
-    <!-- ================= LÓGICA DO APP ================= -->
+    <!-- Modal de renomear / confirmar -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h3 id="modalTitle">Renomear transcrição</h3>
+            <p id="modalDesc">Escolha um novo nome para esta gravação.</p>
+            <input type="text" id="modalInput">
+            <div class="modal-actions">
+                <button class="btn-ghost" id="modalCancel">Cancelar</button>
+                <button class="btn-primary" id="modalOk">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastZone"></div>
+
     <script>
-        // Registro do Service Worker para WhatsApp / PWA
+        // --- Registro do PWA / Service Worker ---
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('./sw.js').catch(err => console.error("Erro no Service Worker:", err));
         }
 
-        // Navegação de Abas
-        function navTo(viewName, navElement) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(`view-${viewName}`).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            navElement.classList.add('active');
-        }
-
-        // --- SISTEMA DE PERFIL ---
-        function loadProfile() {
-            const profile = JSON.parse(localStorage.getItem('voxpaper_profile')) || { name: 'Fabiano', email: '', phone: '', gender: '', avatar: '' };
-            
-            document.getElementById('prof-name').value = profile.name;
-            document.getElementById('prof-email').value = profile.email;
-            document.getElementById('prof-phone').value = profile.phone;
-            document.getElementById('prof-gender').value = profile.gender;
-            
-            const firstName = profile.name.split(' ')[0] || 'Usuário';
-            document.getElementById('dash-name').innerText = `Olá, ${firstName}`;
-            
-            // Atualiza Avatar no Dashboard e Perfil
-            if(profile.avatar) {
-                document.getElementById('dash-avatar').src = profile.avatar;
-                document.getElementById('dash-avatar').style.display = 'block';
-                document.getElementById('dash-initials').style.display = 'none';
-                
-                document.getElementById('profile-preview').src = profile.avatar;
-                document.getElementById('profile-preview').style.display = 'block';
-                document.getElementById('profile-initials').style.display = 'none';
-            } else {
-                document.getElementById('dash-initials').innerText = firstName.charAt(0).toUpperCase();
-                document.getElementById('profile-initials').innerText = firstName.charAt(0).toUpperCase();
-            }
-        }
-
-        function saveProfile() {
-            const profile = {
-                name: document.getElementById('prof-name').value,
-                email: document.getElementById('prof-email').value,
-                phone: document.getElementById('prof-phone').value,
-                gender: document.getElementById('prof-gender').value,
-                avatar: document.getElementById('profile-preview').src || ''
-            };
-            localStorage.setItem('voxpaper_profile', JSON.stringify(profile));
-            loadProfile();
-            alert('Perfil salvo com sucesso!');
-        }
-
-        document.getElementById('avatar-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if(file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    document.getElementById('profile-preview').src = event.target.result;
-                    document.getElementById('profile-preview').style.display = 'block';
-                    document.getElementById('profile-initials').style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // --- Estado Global (Gravação e Pastas) ---
-        let totalSeconds = parseInt(localStorage.getItem('voxpaper_seconds')) || 0;
-        let folders = JSON.parse(localStorage.getItem('voxpaper_folders')) || ['geral', 'reuniões', 'ideias'];
-        let transcriptions = JSON.parse(localStorage.getItem('voxpaper_transcripts')) || [];
-        
+        // --- Estado do App ---
         let mediaRecorder;
         let audioChunks = [];
         let startTime;
         let timerInterval;
+        let audioCtx, analyser, waveRAF, activeStream;
 
-        const btnRecord = document.getElementById('btn-record');
-        const statusMsg = document.getElementById('status-msg');
-        const filterSelect = document.getElementById('filter-select');
+        let totalSecondsUsed = parseInt(localStorage.getItem('voxpaper_seconds')) || 0;
+        let folders = JSON.parse(localStorage.getItem('voxpaper_folders')) || ['geral'];
+        let transcriptions = JSON.parse(localStorage.getItem('voxpaper_transcripts')) || [];
+        let profile = JSON.parse(localStorage.getItem('voxpaper_profile')) || {};
 
-        // --- Lógica do SaaS ---
-        function updateSaaS() {
-            let minutes = (totalSeconds / 60).toFixed(1);
-            let plan = 'Grátis', limit = 20;
+        const recordBtn = document.getElementById('recordBtn');
+        const recordLabel = document.getElementById('recordLabel');
+        const recRing = document.getElementById('recRing');
+        const statusMsg = document.getElementById('statusMsg');
+        const planEl = document.getElementById('currentPlan');
+        const minUsedEl = document.getElementById('minutesUsed');
+        const minLimitEl = document.getElementById('minutesLimit');
+        const progressFill = document.getElementById('progressFill');
+        const progressHint = document.getElementById('progressHint');
+        const progressPct = document.getElementById('progressPct');
+        const listEl = document.getElementById('transcriptionList');
+        const folderFilter = document.getElementById('folderFilter');
+        const newFolderInput = document.getElementById('newFolderInput');
+        const searchInput = document.getElementById('searchInput');
+        const countLabel = document.getElementById('countLabel');
+        const waveCanvas = document.getElementById('waveCanvas');
+        const waveCtx = waveCanvas.getContext('2d');
+        const uploadFolderSelect = document.getElementById('uploadFolderSelect');
+        const foldersList = document.getElementById('foldersList');
 
-            if (minutes > 20 && minutes <= 120) { plan = 'Starter'; limit = 120; } 
-            else if (minutes > 120) { plan = 'Pro'; limit = 300; }
+        // --- Navegação entre abas ---
+        window.switchView = (name) => {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + name).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+            window.scrollTo({ top: 0 });
+        };
 
-            document.getElementById('plan-badge').innerText = `Plano ${plan}`;
-            document.getElementById('minutes-text').innerText = `${minutes} / ${limit} min`;
-            
-            let percent = Math.min((minutes / limit) * 100, 100);
-            document.getElementById('progress-fill').style.width = `${percent}%`;
-            
-            localStorage.setItem('voxpaper_seconds', totalSeconds);
+        // --- Toasts ---
+        function toast(msg, type = '') {
+            const zone = document.getElementById('toastZone');
+            const el = document.createElement('div');
+            el.className = 'toast ' + type;
+            el.textContent = msg;
+            zone.appendChild(el);
+            setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, 3000);
         }
 
-        // --- Inicializar Pastas ---
-        function renderFolders() {
-            let options = `<option value="all">Todas</option><option value="favorites">⭐ Favoritas</option>`;
-            folders.forEach(f => options += `<option value="${f}">${f.charAt(0).toUpperCase() + f.slice(1)}</option>`);
-            filterSelect.innerHTML = options;
+        // --- Modal genérico (substitui prompt/confirm) ---
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDesc = document.getElementById('modalDesc');
+        const modalInput = document.getElementById('modalInput');
+        const modalOk = document.getElementById('modalOk');
+        const modalCancel = document.getElementById('modalCancel');
+        let modalResolve = null;
 
-            const grid = document.getElementById('folders-grid');
-            grid.innerHTML = '';
-            folders.forEach(f => {
-                grid.innerHTML += `
-                    <div class="folder-card">
-                        <span class="material-symbols-outlined">folder</span>
-                        <h4>${f.charAt(0).toUpperCase() + f.slice(1)}</h4>
-                    </div>`;
-            });
+        function openModal({ title, desc, value = '', showInput = true, okText = 'Salvar', danger = false }) {
+            modalTitle.textContent = title;
+            modalDesc.textContent = desc;
+            modalInput.style.display = showInput ? '' : 'none';
+            modalInput.value = value;
+            modalOk.textContent = okText;
+            modalOk.className = danger ? 'btn-danger-solid' : 'btn-primary';
+            modalOverlay.classList.add('open');
+            if (showInput) setTimeout(() => { modalInput.focus(); modalInput.select(); }, 50);
+            return new Promise(resolve => { modalResolve = resolve; });
         }
+        function closeModal(result) {
+            modalOverlay.classList.remove('open');
+            if (modalResolve) { modalResolve(result); modalResolve = null; }
+        }
+        modalOk.addEventListener('click', () => closeModal(modalInput.style.display === 'none' ? true : modalInput.value));
+        modalCancel.addEventListener('click', () => closeModal(null));
+        modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(null); });
+        modalInput.addEventListener('keydown', e => { if (e.key === 'Enter') modalOk.click(); });
 
-        function createFolder() {
-            const input = document.getElementById('new-folder-input');
-            const val = input.value.trim().toLowerCase();
-            if(val && !folders.includes(val)) {
-                folders.push(val);
-                localStorage.setItem('voxpaper_folders', JSON.stringify(folders));
-                renderFolders();
-                renderHistory();
-                input.value = '';
+        // --- Lógica de Planos SaaS ---
+        function updateSaasLimits() {
+            let minutes = (totalSecondsUsed / 60).toFixed(1);
+            let plan = 'Grátis';
+            let limit = 20;
+
+            if (minutes > 20 && minutes <= 120) {
+                plan = 'Starter';
+                limit = 120;
+            } else if (minutes > 120) {
+                plan = 'Pro';
+                limit = 300;
             }
+
+            planEl.innerText = plan;
+            minUsedEl.innerText = minutes;
+            minLimitEl.innerText = limit;
+
+            let percent = Math.min((minutes / limit) * 100, 100);
+            progressFill.style.width = percent + '%';
+            progressPct.innerText = Math.round(percent) + '%';
+
+            if (percent < 40) progressHint.innerText = 'Você está no início do seu plano';
+            else if (percent < 80) progressHint.innerText = 'Bom ritmo! Continue transcrevendo';
+            else if (percent < 100) progressHint.innerText = 'Quase no limite do plano ' + plan;
+            else progressHint.innerText = 'Limite atingido — considere fazer upgrade';
+
+            // Marca o plano atual na aba Planos
+            document.querySelectorAll('.plan-card').forEach(card => {
+                const isCurrent = card.dataset.plan === plan;
+                const tag = card.querySelector('.plan-tag.current');
+                if (tag) tag.style.display = isCurrent ? '' : 'none';
+            });
+
+            localStorage.setItem('voxpaper_seconds', totalSecondsUsed);
         }
 
-        // --- Gravação Real ---
-        btnRecord.addEventListener('click', async () => {
+        window.choosePlan = (plan) => {
+            const current = planEl.innerText;
+            if (plan === current) { toast('Você já está no plano ' + plan + '.'); return; }
+            toast('Em breve: assinatura do plano ' + plan + ' direto pelo app!');
+        };
+        window.buyAddon = () => {
+            toast('Em breve: compra de minutos adicionais pelo app!');
+        };
+
+        // --- Visualizador de onda ---
+        function startWave(stream) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaStreamSource(stream);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            source.connect(analyser);
+            waveCanvas.classList.add('on');
+            const data = new Uint8Array(analyser.frequencyBinCount);
+
+            function draw() {
+                waveRAF = requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(data);
+                const w = waveCanvas.width, h = waveCanvas.height;
+                waveCtx.clearRect(0, 0, w, h);
+                const bars = 48, step = Math.floor(data.length / bars);
+                const barW = w / bars * 0.55, gap = w / bars;
+                const grad = waveCtx.createLinearGradient(0, 0, w, 0);
+                grad.addColorStop(0, '#41A7FF'); grad.addColorStop(0.55, '#2E63E7'); grad.addColorStop(1, '#4F46E5');
+                waveCtx.fillStyle = grad;
+                for (let i = 0; i < bars; i++) {
+                    const v = data[i * step] / 255;
+                    const bh = Math.max(4, v * h * 0.9);
+                    const x = i * gap + (gap - barW) / 2;
+                    waveCtx.beginPath();
+                    waveCtx.roundRect(x, (h - bh) / 2, barW, bh, barW / 2);
+                    waveCtx.fill();
+                }
+            }
+            draw();
+        }
+        function stopWave() {
+            cancelAnimationFrame(waveRAF);
+            waveCanvas.classList.remove('on');
+            waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+            if (audioCtx) { audioCtx.close(); audioCtx = null; }
+        }
+
+        // --- Gravação de Áudio ---
+        recordBtn.addEventListener('click', async () => {
             if (!mediaRecorder || mediaRecorder.state === 'inactive') {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    activeStream = stream;
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
 
                     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+
                     mediaRecorder.onstop = () => {
-                        const duration = Math.floor((Date.now() - startTime) / 1000);
+                        const durationSecs = Math.floor((Date.now() - startTime) / 1000);
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        processAudio(audioBlob, duration, "Nova Gravação");
+                        if (activeStream) activeStream.getTracks().forEach(t => t.stop());
+                        processAudio(audioBlob, durationSecs, 'Nova Gravação');
                     };
 
                     mediaRecorder.start();
                     startTime = Date.now();
-                    btnRecord.classList.add('recording');
-                    document.getElementById('record-icon').innerText = 'stop';
-                    document.getElementById('record-label').innerText = 'Parar';
-                    
+                    recordBtn.classList.add('recording');
+                    recRing.classList.add('recording');
+                    recordBtn.querySelector('.ico').textContent = '⏹️';
+                    recordLabel.textContent = 'Parar';
+                    statusMsg.classList.add('rec');
+                    startWave(stream);
+
                     timerInterval = setInterval(() => {
                         let s = Math.floor((Date.now() - startTime) / 1000);
-                        let m = Math.floor(s/60).toString().padStart(2,'0');
-                        let sec = (s%60).toString().padStart(2,'0');
-                        statusMsg.innerText = `Gravando... ${m}:${sec}`;
-                    }, 1000);
+                        let mins = Math.floor(s / 60).toString().padStart(2, '0');
+                        let secs = (s % 60).toString().padStart(2, '0');
+                        statusMsg.innerText = `● Gravando  ${mins}:${secs}`;
+                    }, 500);
 
-                } catch (err) { alert("Permita o acesso ao microfone."); }
+                } catch (err) {
+                    toast('Permissão de microfone negada.', 'error');
+                }
             } else {
                 mediaRecorder.stop();
                 clearInterval(timerInterval);
-                btnRecord.classList.remove('recording');
-                document.getElementById('record-icon').innerText = 'mic';
-                document.getElementById('record-label').innerText = 'Gravar';
+                stopWave();
+                recordBtn.classList.remove('recording');
+                recRing.classList.remove('recording');
+                recordBtn.querySelector('.ico').textContent = '🎙️';
+                recordLabel.textContent = 'Gravar';
+                statusMsg.classList.remove('rec');
                 statusMsg.innerText = 'Enviando para a nuvem...';
             }
         });
 
-        // --- Upload Manual ---
-        window.handleFileUpload = (event) => {
-            if(event.target.files.length > 0) {
-                const file = event.target.files[0];
-                const estSecs = Math.max(10, Math.floor(file.size / 16000));
-                statusMsg.innerText = 'Enviando arquivo...';
-                processAudio(file, estSecs, "Arquivo Enviado");
-                event.target.value = '';
-            }
-        };
-
-        // --- Comunicação com Backend Render ---
-        async function processAudio(audioBlob, durationSecs, defaultTitle) {
-            totalSeconds += durationSecs;
-            updateSaaS();
+        // --- Envio para o Backend e Salvamento ---
+        async function processAudio(audioBlob, durationSecs, defaultTitle, folder = 'geral') {
+            totalSecondsUsed += durationSecs;
+            updateSaasLimits();
 
             const formData = new FormData();
             formData.append('audio', audioBlob, 'audio.webm');
 
             try {
-                // Certifique-se de que a URL é a do seu servidor no Render
                 const response = await fetch('https://transcreve-backeng.onrender.com/upload', {
                     method: 'POST',
                     body: formData
                 });
 
-                if(!response.ok) throw new Error("Erro no servidor");
+                if (!response.ok) throw new Error("Falha no servidor");
+
                 const data = await response.json();
-                
+                const textResult = data.transcription || "Nenhuma fala detectada.";
+
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
+                    const base64Audio = reader.result;
+
                     const newRecord = {
                         id: Date.now(),
                         title: `${defaultTitle} - ${new Date().toLocaleDateString()}`,
-                        text: data.transcription || "Nenhum texto detectado.",
-                        audioData: reader.result,
-                        folder: 'geral',
-                        favorite: false
+                        text: textResult,
+                        audioData: base64Audio,
+                        folder: folders.includes(folder) ? folder : 'geral',
+                        favorite: false,
+                        createdAt: Date.now(),
+                        duration: durationSecs
                     };
+
                     transcriptions.unshift(newRecord);
                     saveData();
-                    renderHistory();
-                    statusMsg.innerText = 'Transcrição salva!';
-                    setTimeout(() => statusMsg.innerText = 'Pronto para gravar', 3000);
-                };
+                    renderTranscriptions();
+                    renderFoldersView();
+                    statusMsg.innerText = 'Transcrição salva com sucesso!';
+                    toast('✨ Transcrição salva com sucesso!', 'success');
+                    setTimeout(() => statusMsg.innerText = 'Toque para iniciar a gravação', 3000);
+                }
             } catch (err) {
-                statusMsg.innerText = 'Erro ao conectar. Tente novamente.';
+                statusMsg.innerText = 'Erro ao processar áudio.';
+                toast('Erro ao processar o áudio. Tente novamente.', 'error');
                 console.error(err);
             }
         }
 
-        // --- Histórico (Player, Renomear, Favoritar, Trocar Pasta) ---
-        function renderHistory() {
-            const container = document.getElementById('history-container');
-            container.innerHTML = '';
-            const filter = filterSelect.value;
+        // --- Upload de arquivos de áudio (aba Pastas) ---
+        const uploadZone = document.getElementById('uploadZone');
+        const uploadInput = document.getElementById('uploadInput');
+        uploadZone.addEventListener('click', () => uploadInput.click());
 
-            let filtered = transcriptions;
-            if(filter === 'favorites') filtered = transcriptions.filter(t => t.favorite);
-            else if(filter !== 'all') filtered = transcriptions.filter(t => t.folder === filter);
-
-            if(filtered.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color: var(--text-secondary); margin-top: 20px;">Nenhuma transcrição encontrada.</p>';
-                return;
-            }
-
-            filtered.forEach(t => {
-                let folderOpts = folders.map(f => `<option value="${f}" ${t.folder === f ? 'selected' : ''}>${f.charAt(0).toUpperCase() + f.slice(1)}</option>`).join('');
-                
-                container.innerHTML += `
-                    <div class="history-item">
-                        <div class="history-top">
-                            <div class="history-title-area">
-                                <h4>${t.title}</h4>
-                                <button class="icon-btn" onclick="renameItem(${t.id})" title="Renomear"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span></button>
-                            </div>
-                            <button class="icon-btn star ${t.favorite ? 'active' : ''}" onclick="toggleFav(${t.id})">
-                                <span class="material-symbols-outlined">${t.favorite ? 'star' : 'star_border'}</span>
-                            </button>
-                        </div>
-                        
-                        <audio controls src="${t.audioData}"></audio>
-                        <div class="transcript-text" contenteditable="true">${t.text}</div>
-                        
-                        <div class="history-footer">
-                            <select class="folder-tag-select" onchange="changeFolder(${t.id}, this.value)">
-                                ${folderOpts}
-                            </select>
-                            <button class="icon-btn" onclick="deleteItem(${t.id})" style="color: var(--danger-color);"><span class="material-symbols-outlined" style="font-size: 20px;">delete</span></button>
-                        </div>
-                    </div>
-                `;
+        function getAudioDuration(file) {
+            return new Promise(resolve => {
+                const a = document.createElement('audio');
+                a.preload = 'metadata';
+                a.onloadedmetadata = () => {
+                    URL.revokeObjectURL(a.src);
+                    resolve(isFinite(a.duration) ? Math.round(a.duration) : null);
+                };
+                a.onerror = () => { URL.revokeObjectURL(a.src); resolve(null); };
+                a.src = URL.createObjectURL(file);
             });
         }
 
-        // --- Funções de Interação do Histórico ---
-        window.renameItem = (id) => {
-            const item = transcriptions.find(t => t.id === id);
-            const newTitle = prompt("Digite o novo nome:", item.title);
-            if(newTitle) { item.title = newTitle; saveData(); renderHistory(); }
-        };
-        window.toggleFav = (id) => {
-            const item = transcriptions.find(t => t.id === id);
-            item.favorite = !item.favorite; saveData(); renderHistory();
-        };
-        window.changeFolder = (id, f) => {
-            const item = transcriptions.find(t => t.id === id);
-            item.folder = f; saveData(); renderHistory();
-        };
-        window.deleteItem = (id) => {
-            if(confirm("Excluir esta transcrição?")) {
-                transcriptions = transcriptions.filter(t => t.id !== id);
-                saveData(); renderHistory();
-            }
-        };
-        function saveData() { localStorage.setItem('voxpaper_transcripts', JSON.stringify(transcriptions)); }
+        uploadInput.addEventListener('change', async () => {
+            const files = [...uploadInput.files];
+            uploadInput.value = '';
+            if (!files.length) return;
 
-        // --- Escuta Áudio Compartilhado do WhatsApp ---
-        navigator.serviceWorker.addEventListener('message', event => {
-            if (event.data.type === 'SHARED_AUDIO') {
-                statusMsg.innerText = 'Processando áudio recebido...';
-                const file = event.data.file;
-                const estSecs = Math.max(10, Math.floor(file.size / 16000)); 
-                processAudio(file, estSecs, 'Áudio Recebido');
+            const destFolder = uploadFolderSelect.value || 'geral';
+            for (const file of files) {
+                toast(`Enviando "${file.name}"...`);
+                const dur = await getAudioDuration(file);
+                const secs = dur || Math.max(10, Math.floor(file.size / 16000));
+                const title = file.name.replace(/\.[^.]+$/, '') || 'Áudio Enviado';
+                await processAudio(file, secs, title, destFolder);
             }
         });
 
-        // --- Boot ---
+        // --- Gestão de Pastas ---
+        document.getElementById('createFolderBtn').addEventListener('click', () => {
+            const folderName = newFolderInput.value.trim().toLowerCase();
+            if (!folderName) { toast('Digite um nome para a pasta.', 'error'); return; }
+            if (folders.includes(folderName)) { toast('Essa pasta já existe.', 'error'); return; }
+            folders.push(folderName);
+            localStorage.setItem('voxpaper_folders', JSON.stringify(folders));
+            renderFolderOptions();
+            newFolderInput.value = '';
+            toast(`Pasta "${folderName}" criada!`, 'success');
+        });
+        newFolderInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('createFolderBtn').click(); });
+
+        function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+        function renderFolderOptions() {
+            const current = folderFilter.value;
+            folderFilter.innerHTML = `
+                <option value="all">Todas as Pastas</option>
+                <option value="favorites">⭐ Favoritos</option>
+            `;
+            folders.forEach(f => {
+                folderFilter.innerHTML += `<option value="${f}">${capitalize(f)}</option>`;
+            });
+            if ([...folderFilter.options].some(o => o.value === current)) folderFilter.value = current;
+
+            const currentUp = uploadFolderSelect.value;
+            uploadFolderSelect.innerHTML = folders.map(f => `<option value="${f}">${capitalize(f)}</option>`).join('');
+            if ([...uploadFolderSelect.options].some(o => o.value === currentUp)) uploadFolderSelect.value = currentUp;
+
+            renderTranscriptions();
+            renderFoldersView();
+        }
+
+        function renderFoldersView() {
+            const label = document.getElementById('folderCountLabel');
+            label.innerText = folders.length === 1 ? '1 pasta' : `${folders.length} pastas`;
+            foldersList.innerHTML = '';
+            folders.forEach(f => {
+                const count = transcriptions.filter(t => t.folder === f).length;
+                const row = document.createElement('div');
+                row.className = 'folder-row card';
+                row.innerHTML = `
+                    <div class="fr-ico">📁</div>
+                    <div class="fr-info">
+                        <strong>${capitalize(escHtml(f))}</strong>
+                        <span>${count === 1 ? '1 transcrição' : count + ' transcrições'}</span>
+                    </div>
+                    <button class="chip-btn" onclick="openFolder('${f.replace(/'/g, "\\'")}')">Abrir</button>
+                    ${f !== 'geral' ? `<button class="icon-btn danger" onclick="deleteFolder('${f.replace(/'/g, "\\'")}')" title="Excluir pasta">🗑️</button>` : ''}
+                `;
+                foldersList.appendChild(row);
+            });
+        }
+
+        window.openFolder = (name) => {
+            folderFilter.value = name;
+            renderTranscriptions();
+            switchView('inicio');
+        };
+
+        window.deleteFolder = async (name) => {
+            const count = transcriptions.filter(t => t.folder === name).length;
+            const ok = await openModal({
+                title: 'Excluir pasta',
+                desc: count > 0
+                    ? `A pasta "${capitalize(name)}" tem ${count} transcrição(ões). Elas serão movidas para "Geral".`
+                    : `Excluir a pasta "${capitalize(name)}"?`,
+                showInput: false,
+                okText: 'Excluir',
+                danger: true
+            });
+            if (!ok) return;
+            transcriptions.forEach(t => { if (t.folder === name) t.folder = 'geral'; });
+            folders = folders.filter(f => f !== name);
+            localStorage.setItem('voxpaper_folders', JSON.stringify(folders));
+            saveData();
+            if (folderFilter.value === name) folderFilter.value = 'all';
+            renderFolderOptions();
+            toast('Pasta excluída.', 'success');
+        };
+
+        folderFilter.addEventListener('change', renderTranscriptions);
+        searchInput.addEventListener('input', renderTranscriptions);
+
+        // --- Perfil ---
+        const avatarInput = document.getElementById('avatarInput');
+        const avatarImg = document.getElementById('avatarImg');
+        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+        const saasAvatar = document.getElementById('saasAvatar');
+        let avatarData = profile.photo || null;
+
+        document.getElementById('avatarCircle').addEventListener('click', () => avatarInput.click());
+        avatarInput.addEventListener('change', () => {
+            const file = avatarInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                avatarData = reader.result;
+                showAvatar(avatarData);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function showAvatar(data) {
+            if (!data) return;
+            avatarImg.src = data;
+            avatarImg.style.display = 'block';
+            avatarPlaceholder.style.display = 'none';
+            saasAvatar.src = data;
+            saasAvatar.classList.add('on');
+        }
+
+        function loadProfile() {
+            document.getElementById('profileName').value = profile.name || '';
+            document.getElementById('profilePhone').value = profile.phone || '';
+            document.getElementById('profileEmail').value = profile.email || '';
+            document.getElementById('profileGender').value = profile.gender || '';
+            if (profile.photo) showAvatar(profile.photo);
+            updateGreeting();
+        }
+
+        function updateGreeting() {
+            const first = (profile.name || 'Fabiano').trim().split(/\s+/)[0];
+            document.getElementById('greetName').innerText = first;
+        }
+
+        document.getElementById('saveProfileBtn').addEventListener('click', () => {
+            const name = document.getElementById('profileName').value.trim();
+            const email = document.getElementById('profileEmail').value.trim();
+            if (!name) { toast('Informe seu nome.', 'error'); return; }
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('E-mail inválido.', 'error'); return; }
+
+            profile = {
+                name,
+                phone: document.getElementById('profilePhone').value.trim(),
+                email,
+                gender: document.getElementById('profileGender').value,
+                photo: avatarData
+            };
+            try {
+                localStorage.setItem('voxpaper_profile', JSON.stringify(profile));
+                updateGreeting();
+                toast('Perfil salvo com sucesso!', 'success');
+            } catch (e) {
+                toast('Foto muito grande para salvar. Tente uma imagem menor.', 'error');
+            }
+        });
+
+        // --- Helpers ---
+        function fmtDuration(s) {
+            if (!s) return '';
+            const m = Math.floor(s / 60), r = s % 60;
+            return m > 0 ? `${m}min ${r}s` : `${r}s`;
+        }
+        function fmtDate(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            const diff = (Date.now() - ts) / 1000;
+            if (diff < 60) return 'agora mesmo';
+            if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+            if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+            return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) + ' · ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        function escHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // --- Renderizar Interface ---
+        function renderTranscriptions() {
+            listEl.innerHTML = '';
+            const filter = folderFilter.value;
+            const query = searchInput.value.trim().toLowerCase();
+
+            let filtered = transcriptions;
+            if (filter === 'favorites') {
+                filtered = filtered.filter(t => t.favorite);
+            } else if (filter !== 'all') {
+                filtered = filtered.filter(t => t.folder === filter);
+            }
+            if (query) {
+                filtered = filtered.filter(t =>
+                    (t.title || '').toLowerCase().includes(query) ||
+                    (t.text || '').toLowerCase().includes(query)
+                );
+            }
+
+            countLabel.innerText = filtered.length === 1 ? '1 gravação' : `${filtered.length} gravações`;
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="big">🎧</div>
+                        <p><strong>Nada por aqui ainda.</strong><br>
+                        ${query ? 'Nenhum resultado para sua busca.' : 'Toque no botão de gravação e sua voz vira texto em segundos.'}</p>
+                    </div>`;
+                return;
+            }
+
+            filtered.forEach((t, idx) => {
+                const card = document.createElement('div');
+                card.className = 'transcription-card card';
+                card.style.animationDelay = (idx * 0.05) + 's';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title" onclick="renameTranscription(${t.id})">${escHtml(t.title)} <span class="edit-hint">✏️</span></div>
+                        <div class="card-actions">
+                            <button class="icon-btn ${t.favorite ? 'active' : ''}" onclick="toggleFavorite(${t.id})" title="Favoritar">⭐</button>
+                            <button class="icon-btn danger" onclick="deleteTranscription(${t.id})" title="Excluir">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="card-meta">
+                        <span class="folder-chip">📁 ${escHtml(capitalize(t.folder))}</span>
+                        ${t.createdAt ? `<span>🕒 ${fmtDate(t.createdAt)}</span>` : ''}
+                        ${t.duration ? `<span>⏱️ ${fmtDuration(t.duration)}</span>` : ''}
+                    </div>
+                    <audio controls src="${t.audioData}"></audio>
+                    <div class="transcription-text" contenteditable="true" data-id="${t.id}">${escHtml(t.text)}</div>
+                    <div class="card-footer">
+                        <button class="chip-btn" onclick="copyText(${t.id})">📋 Copiar texto</button>
+                        <button class="chip-btn" onclick="downloadAudio(${t.id})">⬇️ Baixar áudio</button>
+                        <select class="folder-select" onchange="changeFolder(${t.id}, this.value)">
+                            ${folders.map(f => `<option value="${f}" ${t.folder === f ? 'selected' : ''}>${capitalize(f)}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+
+            // Salvar edições feitas direto no texto (contenteditable)
+            listEl.querySelectorAll('.transcription-text').forEach(el => {
+                el.addEventListener('blur', () => {
+                    const item = transcriptions.find(t => t.id === parseInt(el.dataset.id));
+                    if (item && item.text !== el.innerText) {
+                        item.text = el.innerText;
+                        saveData();
+                        toast('Texto atualizado.', 'success');
+                    }
+                });
+            });
+        }
+
+        // --- Funções Interativas ---
+        window.renameTranscription = async (id) => {
+            const item = transcriptions.find(t => t.id === id);
+            const newName = await openModal({
+                title: 'Renomear transcrição',
+                desc: 'Escolha um novo nome para esta gravação.',
+                value: item.title
+            });
+            if (newName && newName.trim() !== '') {
+                item.title = newName.trim();
+                saveData();
+                renderTranscriptions();
+                toast('Nome atualizado!', 'success');
+            }
+        };
+
+        window.toggleFavorite = (id) => {
+            const item = transcriptions.find(t => t.id === id);
+            item.favorite = !item.favorite;
+            saveData();
+            renderTranscriptions();
+        };
+
+        window.changeFolder = (id, newFolder) => {
+            const item = transcriptions.find(t => t.id === id);
+            item.folder = newFolder;
+            saveData();
+            renderTranscriptions();
+            renderFoldersView();
+            toast(`Movido para "${capitalize(newFolder)}".`, 'success');
+        };
+
+        window.deleteTranscription = async (id) => {
+            const item = transcriptions.find(t => t.id === id);
+            const ok = await openModal({
+                title: 'Excluir transcrição',
+                desc: `"${item.title}" será apagada permanentemente. Essa ação não pode ser desfeita.`,
+                showInput: false,
+                okText: 'Excluir',
+                danger: true
+            });
+            if (ok) {
+                transcriptions = transcriptions.filter(t => t.id !== id);
+                saveData();
+                renderTranscriptions();
+                renderFoldersView();
+                toast('Transcrição excluída.', 'success');
+            }
+        };
+
+        window.copyText = (id) => {
+            const item = transcriptions.find(t => t.id === id);
+            navigator.clipboard.writeText(item.text)
+                .then(() => toast('Texto copiado!', 'success'))
+                .catch(() => toast('Não foi possível copiar.', 'error'));
+        };
+
+        window.downloadAudio = (id) => {
+            const item = transcriptions.find(t => t.id === id);
+            const a = document.createElement('a');
+            a.href = item.audioData;
+            a.download = (item.title || 'voxpaper-audio').replace(/[^\w\s-]/g, '').trim() + '.webm';
+            a.click();
+        };
+
+        function saveData() {
+            localStorage.setItem('voxpaper_transcripts', JSON.stringify(transcriptions));
+        }
+
+        // --- Escuta de Áudio Compartilhado (WhatsApp/Sistema) ---
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data.type === 'SHARED_AUDIO') {
+                statusMsg.innerText = 'Recebendo áudio compartilhado...';
+                switchView('inicio');
+                const file = event.data.file;
+                const estimatedSecs = Math.max(10, Math.floor(file.size / 16000));
+                processAudio(file, estimatedSecs, 'Áudio Compartilhado');
+            }
+        });
+
+        // Inicializar
+        updateSaasLimits();
+        renderFolderOptions();
         loadProfile();
-        updateSaaS();
-        renderFolders();
-        renderHistory();
     </script>
 </body>
 </html>
