@@ -1,81 +1,76 @@
 const express = require('express');
-const cors = require('cors');
 const multer = require('multer');
-const { SpeechClient } = require('@google-cloud/speech');
-const { Storage } = require('@google-cloud/storage');
+const fs = require('fs');
+const path = require('path');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+const speech = require('@google-cloud/speech');
+
+// Configura o caminho do FFmpeg
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 const app = express();
+const upload = multer({ dest: 'uploads/' });
 
-// A MÁGICA AQUI: Isso libera o navegador para enviar o áudio sem dar erro de CORS
-app.use(cors()); 
-app.use(express.json());
+// Instancia o cliente do Google Cloud (Certifique-se de que a GOOGLE_CREDENTIALS está certa no Render)
+const client = new speech.SpeechClient();
 
-// Configurando o Multer para receber o arquivo de áudio na memória
-const upload = multer({ storage: multer.memoryStorage() });
-
-// Configuração do Google Cloud usando as variáveis de ambiente que você colocou no Render
-let credentialsObj = {};
-if (process.env.GOOGLE_CREDENTIALS) {
-    try {
-        credentialsObj = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-    } catch (e) {
-        console.error("Erro ao ler as credenciais do Google. Verifique a variável no Render.");
+app.post('/upload', upload.single('audio'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Nenhum áudio enviado.' });
     }
-}
 
-const speechClient = new SpeechClient({ credentials: credentialsObj });
-const storage = new Storage({ credentials: credentialsObj });
-const bucketName = process.env.GOOGLE_BUCKET_NAME || 'seu-bucket-padrao';
+    const inputPath = req.file.path;
+    const outputPath = path.join(__dirname, 'uploads', `${req.file.filename}.wav`);
 
-// Rota principal de upload e transcrição
-app.post('/upload', upload.single('audio'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Nenhum arquivo de áudio foi enviado.' });
-        }
+    // Converte QUALQUER formato (Opus do WhatsApp, WebM, M4A) para WAV (LINEAR16) 16000Hz
+    ffmpeg(inputPath)
+        .toFormat('wav')
+        .audioChannels(1) // Google prefere áudio mono
+        .audioFrequency(16000) // Taxa de amostragem ideal para reconhecimento de voz
+        .on('error', (err) => {
+            console.error('Erro na conversão:', err);
+            fs.unlinkSync(inputPath); // Limpa o arquivo original
+            res.status(500).json({ error: 'Erro ao processar o áudio.' });
+        })
+        .on('end', async () => {
+            try {
+                // Lê o arquivo convertido
+                const audioBytes = fs.readFileSync(outputPath).toString('base64');
 
-        console.log("Áudio recebido, iniciando processamento...");
+                const request = {
+                    audio: {
+                        content: audioBytes,
+                    },
+                    config: {
+                        encoding: 'LINEAR16', // Agora sempre será LINEAR16, não importa a origem
+                        sampleRateHertz: 16000,
+                        languageCode: 'pt-BR',
+                    },
+                };
 
-        const audioBytes = req.file.buffer.toString('base64');
+                // Envia para o Google Cloud
+                const [response] = await client.recognize(request);
+                const transcription = response.results
+                    .map(result => result.alternatives[0].transcript)
+                    .join('\n');
 
-        const audio = {
-            content: audioBytes,
-        };
+                // Retorna a transcrição
+                res.json({ transcription: transcription });
 
-        const config = {
-            encoding: 'WEBM_OPUS', // Ajuste conforme o formato de gravação do navegador
-            sampleRateHertz: 48000,
-            languageCode: 'pt-BR',
-        };
-
-        const request = {
-            audio: audio,
-            config: config,
-        };
-
-        // Chama a API do Google Speech-to-Text
-        const [response] = await speechClient.recognize(request);
-        const transcription = response.results
-            .map(result => result.alternatives[0].transcript)
-            .join('\n');
-
-        console.log("Transcrição concluída com sucesso!");
-        
-        // Retorna o texto para o frontend
-        res.json({ transcription: transcription });
-
-    } catch (error) {
-        console.error("Erro durante a transcrição:", error);
-        res.status(500).json({ error: 'Falha interna no processamento do áudio.', detalhes: error.message });
-    }
+            } catch (error) {
+                console.error('Erro no Google Speech:', error);
+                res.status(500).json({ error: 'Erro ao transcrever.' });
+            } finally {
+                // Limpeza dos arquivos temporários no servidor do Render
+                if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            }
+        })
+        .save(outputPath);
 });
 
-// Rota de teste para ver se o servidor acordou no Render
-app.get('/', (req, res) => {
-    res.send("Servidor Transcreve.AI está online e rodando!");
-});
-
-// Inicialização do Servidor
+// Seu app.listen em 0.0.0.0 e na porta do Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando na porta ${PORT}`);
