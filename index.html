@@ -496,7 +496,7 @@
             border-radius: 20px; box-shadow: 0 24px 60px rgba(17, 28, 51, 0.25);
         }
         .modal h3 { font-family: 'Sora', sans-serif; font-size: 1.05rem; margin-bottom: 6px; }
-        .modal p { font-size: 0.83rem; color: var(--text-2); margin-bottom: 16px; }
+        .modal p { font-size: 0.83rem; color: var(--text-2); margin-bottom: 16px; white-space: pre-line; }
         .modal input {
             width: 100%; padding: 13px 14px; border-radius: 12px;
             border: 1px solid var(--border-strong); background: var(--surface-soft);
@@ -532,7 +532,7 @@
                 <img class="logo-mark" src="icons/icon-192.png" alt="Voxpaper">
                 <div>
                     <h1>Voxpaper</h1>
-                    <div class="tagline">Voz em texto, na hora</div>
+                    <div class="tagline" id="versionTag" style="cursor:pointer;" title="Toque para diagnóstico">Voz em texto · v—</div>
                 </div>
             </div>
             <div class="plan-badge" onclick="switchView('planos')"><span class="dot"></span> Plano <span id="currentPlan">Grátis</span></div>
@@ -782,6 +782,37 @@
             navigator.serviceWorker.register('./sw.js').catch(err => console.error("Erro no Service Worker:", err));
         }
 
+        // --- Versão e diagnóstico ---
+        const APP_VERSION = '1.4';
+        document.getElementById('versionTag').innerText = 'Voz em texto · v' + APP_VERSION;
+        document.getElementById('versionTag').addEventListener('click', async () => {
+            let permState = 'não suportado';
+            try {
+                const p = await navigator.permissions.query({ name: 'microphone' });
+                permState = p.state;
+            } catch (e) {}
+            let swState = 'inativo';
+            try {
+                const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+                swState = reg && reg.active ? 'ativo' : 'inativo';
+            } catch (e) {}
+            const mime = pickAudioMime();
+            openModal({
+                title: 'Diagnóstico — v' + APP_VERSION,
+                desc: [
+                    'Conexão segura (HTTPS): ' + (window.isSecureContext ? 'sim ✅' : 'NÃO ❌'),
+                    'Acesso ao microfone: ' + (navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? 'sim ✅' : 'NÃO ❌'),
+                    'Gravador (MediaRecorder): ' + (typeof MediaRecorder !== 'undefined' ? 'sim ✅' : 'NÃO ❌'),
+                    'Permissão do microfone: ' + permState,
+                    'Service worker: ' + swState,
+                    'Formato de gravação: ' + (mime || 'padrão do navegador'),
+                    'Navegador: ' + navigator.userAgent.slice(0, 80)
+                ].join('\n'),
+                showInput: false,
+                okText: 'Fechar'
+            });
+        });
+
         // --- Estado do App ---
         let mediaRecorder;
         let audioChunks = [];
@@ -946,19 +977,73 @@
         }
 
         // --- Gravação de Áudio ---
+        let isStartingRec = false;
+
+        // iPhone/Safari não grava webm — escolhe o primeiro formato suportado pelo navegador
+        function pickAudioMime() {
+            if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
+            return ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac']
+                .find(t => MediaRecorder.isTypeSupported(t)) || '';
+        }
+
         recordBtn.addEventListener('click', async () => {
+            if (isStartingRec) return; // evita cliques duplos enquanto o navegador pede permissão
+
             if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                // Diagnósticos claros antes de pedir o microfone
+                if (!window.isSecureContext) {
+                    toast('A gravação exige HTTPS (ou localhost). Abra o app pelo endereço seguro.', 'error');
+                    return;
+                }
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    toast('Este navegador não suporta captura de microfone.', 'error');
+                    return;
+                }
+                if (typeof MediaRecorder === 'undefined') {
+                    toast('Este navegador não suporta gravação de áudio (MediaRecorder).', 'error');
+                    return;
+                }
+
+                // Se a permissão já foi negada antes, avisa direto em vez de falhar em silêncio
+                if (navigator.permissions && navigator.permissions.query) {
+                    try {
+                        const perm = await navigator.permissions.query({ name: 'microphone' });
+                        if (perm.state === 'denied') {
+                            toast('Microfone bloqueado. Toque no cadeado 🔒 na barra de endereço e permita o microfone.', 'error');
+                            return;
+                        }
+                    } catch (e) { /* alguns navegadores não suportam esta consulta */ }
+                }
+
+                isStartingRec = true;
+                statusMsg.innerText = 'Aguardando permissão do microfone...';
+
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // Se o pedido de permissão ficar sem resposta, libera o botão e orienta o usuário
+                    let timedOut = false;
+                    const stream = await Promise.race([
+                        navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
+                            if (timedOut) { s.getTracks().forEach(t => t.stop()); return null; }
+                            return s;
+                        }),
+                        new Promise(res => setTimeout(() => { timedOut = true; res('timeout'); }, 20000))
+                    ]);
+                    if (stream === 'timeout') {
+                        toast('O pedido de permissão não foi respondido. Verifique o aviso do navegador e tente de novo.', 'error');
+                        statusMsg.innerText = 'Toque para iniciar a gravação';
+                        return;
+                    }
+                    if (!stream) return;
                     activeStream = stream;
-                    mediaRecorder = new MediaRecorder(stream);
+                    const mime = pickAudioMime();
+                    mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
                     audioChunks = [];
 
                     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
 
                     mediaRecorder.onstop = () => {
                         const durationSecs = Math.floor((Date.now() - startTime) / 1000);
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || mime || 'audio/webm' });
                         if (activeStream) activeStream.getTracks().forEach(t => t.stop());
                         processAudio(audioBlob, durationSecs, 'Nova Gravação');
                     };
@@ -970,7 +1055,8 @@
                     recordBtn.querySelector('.ico').textContent = '⏹️';
                     recordLabel.textContent = 'Parar';
                     statusMsg.classList.add('rec');
-                    startWave(stream);
+                    statusMsg.innerText = '● Gravando  00:00';
+                    try { startWave(stream); } catch (e) { console.warn('Visualizador indisponível:', e); }
 
                     timerInterval = setInterval(() => {
                         let s = Math.floor((Date.now() - startTime) / 1000);
@@ -980,7 +1066,20 @@
                     }, 500);
 
                 } catch (err) {
-                    toast('Permissão de microfone negada.', 'error');
+                    let msg = 'Não foi possível acessar o microfone.';
+                    if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                        msg = 'Permissão de microfone negada. Toque no cadeado 🔒 na barra de endereço e permita o microfone.';
+                    } else if (err && err.name === 'NotFoundError') {
+                        msg = 'Nenhum microfone encontrado neste dispositivo.';
+                    } else if (err && err.name === 'NotReadableError') {
+                        msg = 'O microfone está em uso por outro aplicativo. Feche-o e tente de novo.';
+                    }
+                    toast(msg, 'error');
+                    statusMsg.classList.remove('rec');
+                    statusMsg.innerText = 'Toque para iniciar a gravação';
+                    console.error(err);
+                } finally {
+                    isStartingRec = false;
                 }
             } else {
                 mediaRecorder.stop();
@@ -1001,7 +1100,11 @@
             updateSaasLimits();
 
             const formData = new FormData();
-            formData.append('audio', audioBlob, 'audio.webm');
+            const type = (audioBlob.type || '');
+            const ext = type.includes('mp4') || type.includes('aac') ? 'm4a'
+                      : type.includes('ogg') ? 'ogg'
+                      : type.includes('mpeg') ? 'mp3' : 'webm';
+            formData.append('audio', audioBlob, 'audio.' + ext);
 
             try {
                 const response = await fetch('https://transcreve-backeng.onrender.com/upload', {
@@ -1392,7 +1495,7 @@
         }
 
         // --- Escuta de Áudio Compartilhado (WhatsApp/Sistema) ---
-        navigator.serviceWorker.addEventListener('message', event => {
+        if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', event => {
             if (event.data.type === 'SHARED_AUDIO') {
                 statusMsg.innerText = 'Recebendo áudio compartilhado...';
                 switchView('inicio');

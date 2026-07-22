@@ -2,7 +2,7 @@
    Estratégia: pré-cache do app shell + stale-while-revalidate para estáticos,
    network-first para navegação, e recepção de áudio compartilhado (share_target). */
 
-const CACHE_NAME = 'voxpaper-v2';
+const CACHE_NAME = 'voxpaper-v4';
 
 const APP_SHELL = [
     './',
